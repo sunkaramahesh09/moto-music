@@ -181,10 +181,10 @@ versions — they refuse to act unless Moto Music is the resumed activity and, f
 
 **State deliberately left on the device** after 2026-09-01 (session 4):
 
-- **both builds are installed**: `com.motomusic.app` (release, the fast one, launcher name
-  "Moto Music") and `com.motomusic.app.debug` ("Moto Music (debug)"). The debug one can go with
-  `adb uninstall com.motomusic.app.debug`; as of this session it holds no favourites, only test
-  play history.
+- **only the release build is installed**: `com.motomusic.app`, launcher name "Moto Music",
+  version `0.1.0-debugsigned`. The debug build was uninstalled after it was opened by mistake
+  twice; reinstall it with `adb install -r -g app/build/outputs/apk/debug/app-debug.apk` only
+  when something actually needs it, and expect a burnt-orange icon.
 - the generated test tracks are **gone**; the phone has only its own 19 audio files, of which
   the library shows **1** — the WhatsApp voice notes and recorder files are filtered by folder,
   and the two the folder rules could not catch are in the release build's hidden list
@@ -314,12 +314,14 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
   `AudioEditorCutter/Trimmed/`. Nothing about either location says "recording", and a filename
   rule (`record*`) would eventually hide somebody's music. That is what "Hide from library" is
   for — the answer to "the filter missed one" is the manual list, not a wider heuristic.
-- **Two builds, two settings stores, one launcher name.** The debug build kept its own
-  DataStore, so songs hidden in the release build were still listed in the debug one — and with
-  identical names and icons the user opened the wrong app and reasonably reported the hiding as
-  broken. `app/src/debug/res/values/strings.xml` now overrides `app_name` to
-  "Moto Music (debug)". Any future per-build divergence needs the same treatment: if two builds
-  can be installed side by side, they must be *tellable* apart.
+- **Two builds, two settings stores, one launcher icon.** The debug build kept its own
+  DataStore, so songs hidden in the release build were still listed in the debug one — and the
+  user, opening the wrong app, reasonably reported the hiding as broken. Renaming the debug build
+  to "Moto Music (debug)" (`app/src/debug/res/values/strings.xml`) **did not fix it**: people tap
+  icons, not names, and it happened a second time. The debug icon now has its own background
+  colour (`app/src/debug/res/values/colors.xml`, burnt orange) and the debug build was
+  uninstalled from the phone. Lesson: if two builds can be installed side by side, they must be
+  distinguishable *at a glance*, and the default should be not to leave both on a user's phone.
 - **A hidden song must also leave the queue.** Hiding only rewrote the library, so the file the
   user had just hidden carried on playing in the mini player.
   `PlaybackConnection.removeSongFromQueue` now runs first.

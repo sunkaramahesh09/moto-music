@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        A different launcher-icon background for the debug build. Renaming it to
+        "Moto Music (debug)" was not enough on its own: with an identical icon the wrong app
+        still gets tapped, and since the two builds keep separate settings, that looks exactly
+        like the app forgetting what you told it. The colour is the tell.
+    -->
+    <color name="ic_launcher_background">#C2410C</color>
+</resources>
