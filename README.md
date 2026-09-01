@@ -15,6 +15,21 @@ which you can verify yourself in one line of the manifest.
 > **Not affiliated with Motorola or Lenovo.** "Moto Music" is an independent hobby project and is
 > neither endorsed by nor connected to any phone manufacturer.
 
+## Screenshots
+
+| Home | Songs | Albums | Player |
+| --- | --- | --- | --- |
+| ![Home](docs/screenshots/home.png) | ![Songs](docs/screenshots/songs.png) | ![Albums](docs/screenshots/albums.png) | ![Player](docs/screenshots/player.png) |
+
+| Artists | Settings | Home, light theme | Player, light theme |
+| --- | --- | --- | --- |
+| ![Artists](docs/screenshots/artists.png) | ![Settings](docs/screenshots/settings.png) | ![Home in the light theme](docs/screenshots/home-light.png) | ![Player in the light theme](docs/screenshots/player-light.png) |
+
+The music in these screenshots is a demo library generated for the purpose — the audio, the
+artwork and the artist and album names are all invented, so nothing here borrows anybody's
+copyright. Colours come from the phone's wallpaper through Material You, so the app will not
+look exactly like this on yours.
+
 ## What it does
 
 - Your library by **songs, albums, artists and folders**, read from `MediaStore`
