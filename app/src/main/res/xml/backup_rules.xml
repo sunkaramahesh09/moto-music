@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Playlists, favourites and settings are the only data worth restoring to a new device.
+  The cached song table is deliberately excluded: it is rebuilt from MediaStore on first launch.
+-->
+<full-backup-content>
+    <include domain="database" path="moto_music.db" />
+    <include domain="file" path="datastore/" />
+</full-backup-content>

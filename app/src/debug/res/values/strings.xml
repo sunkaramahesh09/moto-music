@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The debug build installs alongside the release one (applicationIdSuffix ".debug") and
+        keeps entirely separate settings, so an identical launcher name is a trap: hide a song
+        in one and the other still shows it. This source-set override renames only the debug
+        build; the release build keeps "Moto Music" from src/main.
+    -->
+    <string name="app_name">Moto Music (debug)</string>
+</resources>

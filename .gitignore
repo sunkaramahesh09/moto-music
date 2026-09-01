@@ -1,0 +1,19 @@
+# Build output
+build/
+app/build/
+.gradle/
+.kotlin/
+
+# Machine-specific: points at wherever this checkout's Android SDK lives
+local.properties
+
+# Signing material never belongs in the repository
+keystore.properties
+*.jks
+*.keystore
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+captures/
