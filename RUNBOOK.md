@@ -322,6 +322,12 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
   colour (`app/src/debug/res/values/colors.xml`, burnt orange) and the debug build was
   uninstalled from the phone. Lesson: if two builds can be installed side by side, they must be
   distinguishable *at a glance*, and the default should be not to leave both on a user's phone.
+- **Screenshots cannot use the user's own library.** Their downloads carry the source site's
+  name in the title tags *and burned into the cover art itself* — editing a watermark out of
+  copyrighted film artwork so it can be published is not a fix. Tags were cleaned with `mutagen`
+  (a genuine improvement to their library), but the covers are why the README ships a wholly
+  generated demo library instead. `pm clear` before a screenshot run also wipes the hidden-songs
+  list and every setting: re-hide and re-check afterwards.
 - **A hidden song must also leave the queue.** Hiding only rewrote the library, so the file the
   user had just hidden carried on playing in the mini player.
   `PlaybackConnection.removeSongFromQueue` now runs first.
@@ -343,11 +349,9 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 *(Walking every screen is done — 2026-09-01. See "Verified on real hardware".)*
 
 0. **Before the repository goes public**: create a real release keystore and back it up (losing
-   it means never updating the app again); take screenshots for the README with a *neutral*
-   library — the user's own library is one downloaded film track whose cover art is copyrighted
-   and whose file name carries a piracy-site name, so it cannot be published; and watch the first
-   CI run, since `.github/workflows/build.yml` has never executed (AGP 9.3.2 with compileSdk 37.1
-   may need an explicit SDK package on the runner).
+   it means never updating the app again), and watch the first CI run, since
+   `.github/workflows/build.yml` has never executed (AGP 9.3.2 with compileSdk 37.1 may need an
+   explicit SDK package on the runner). Screenshots are done.
 
 1. **Test the paths a walkthrough cannot reach**: lock-screen and Bluetooth transport controls,
    pause on headphone disconnect, the sleep timer actually firing, and "resume last session"
@@ -364,6 +368,13 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 ---
 
 ## 7. Session log
+
+**2026-09-01 (session 4c)** — README screenshots. Cleaned the site branding out of the user's
+own tags with `mutagen` (backed up first), then found the same branding burned into the cover
+art, so the screenshots were shot against a generated demo library instead: 10 tracks, 3 invented
+artists, generated covers, pushed and then removed, with the user's own files parked under a
+`.nomedia` folder in the meantime and restored afterwards. Eight screenshots at 360 px in
+`docs/screenshots/`, both themes, taken in SystemUI demo mode for a clean status bar.
 
 **2026-09-01 (session 4b)** — prepared the project for open source at the user's request: `git
 init` (there had been no version control at all), `.gitignore`, GPL-3.0 licence, README,
