@@ -228,9 +228,22 @@ git log --format='%an <%ae>%n%b' origin/main | grep -i claude   # expect no outp
 git ls-remote --heads --tags origin                             # expect only refs/heads/main
 ```
 
-All three were clean. GitHub's **Contributors sidebar is a cached view** that is recomputed
-asynchronously and kept showing "claude" for a while after the data was already clean — that
-panel is not evidence, the API is. The next push refreshes it.
+All three came back clean — and the Contributors sidebar **still showed "claude" anyway**,
+in a fresh incognito window, so it was not a browser or page cache. The reason:
+
+> **A force-push does not delete the old commits.** GitHub keeps unreachable objects and never
+> garbage-collects them for you, so every pre-rewrite commit still resolved at its old SHA
+> (`https://github.com/…/commit/cbd1e97…` → HTTP 200, still showing the co-author trailer).
+> The `/contributors` API and the `/graphs/contributors` page rebuilt correctly, but the repo
+> **overview sidebar** reads a different index that still counted those orphans.
+
+The only two real fixes are to delete the repository and push the clean history to a new one
+(cheap while nothing depends on it — check first that issues, PRs, releases, forks and stars are
+all zero and the tree is in sync), or to ask GitHub Support to garbage-collect the unreachable
+objects and rebuild the contributors index. Waiting does not work.
+
+**So: never let the trailer reach GitHub in the first place.** That is what the hook is for, and
+why re-creating it after any fresh clone matters.
 
 **CI**: `.github/workflows/build.yml` ran for the first time on the initial push and **passed**
 (assemble + unit tests + lint on `ubuntu-latest`). The worry that AGP 9.3.2 with compileSdk 37.1
@@ -379,9 +392,11 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
   `PlaybackConnection.removeSongFromQueue` now runs first.
 - **`gh api -f 'names[]=x'` breaks under zsh.** The brackets glob, and the command dies with
   `(eval):2: no matches found`. Build the JSON and pipe it in with `--input -` instead.
-- **A force-push does not update GitHub's Contributors panel.** It is computed from a cached
-  statistics table on GitHub's own schedule; the `/contributors` API is the truth. Do not chase a
-  stale sidebar with more rewrites.
+- **A force-push does not remove a commit from GitHub — only from the branch.** The old objects
+  stay reachable by SHA indefinitely, which is why rewriting history did not take "claude" off
+  the Contributors sidebar even after every API said the repository was clean. Rewriting again
+  cannot help; deleting the repository or asking Support to gc it are the only fixes. Corollary
+  for anything sensitive: once it is pushed, treat it as published. See section 2c.
 - **`hiltViewModel`** now lives in `androidx.hilt.lifecycle.viewmodel.compose`, not
   `androidx.hilt.navigation.compose`.
 - **Auto-mirrored icons**: `Icons.AutoMirrored.Rounded.{Sort, QueueMusic, TrendingUp, ArrowBack,
