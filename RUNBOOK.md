@@ -5,7 +5,7 @@ INTERNET permission, and keeps playlists, favourites and history in a local Room
 Published as an open-source project under the GPL-3.0 — see README.md and CONTRIBUTING.md, which
 are what the outside world reads; this runbook is the working memory behind them.
 
-Last updated: 2026-09-01 (session 4).
+Last updated: 2026-09-02 (session 4d).
 
 ---
 
@@ -194,6 +194,52 @@ versions — they refuse to act unless Moto Music is the resumed activity and, f
 
 ---
 
+## 2c. The public repository
+
+Live at **https://github.com/sunkaramahesh09/moto-music**, public, GPL-3.0, pushed
+2026-09-02 (session 4d). `origin` is the HTTPS URL; pushes authenticate through the `gh` CLI
+logged in as `sunkaramahesh09`.
+
+**Commit identity is fixed and not negotiable.** `user.name = mahesh`,
+`user.email = sunkaramahesh494@gmail.com`. The user's other address
+(`victorybazarspvtltd.software@gmail.com`, which is what this machine's tooling reports) must
+never appear in a commit — it was explicitly ruled out.
+
+**No assistant attribution in commit messages, ever.** The first four commits shipped with
+`Co-Authored-By: Claude` trailers, which made GitHub list "claude" as a second contributor.
+The user did not want that, so history was rewritten and force-pushed:
+
+```bash
+git filter-branch -f --msg-filter 'sed -e "/^Co-Authored-By: Claude/d" -e "/^Claude-Session:/d"' -- --all
+git push --force origin main
+```
+
+To stop it recurring there is a **`commit-msg` hook** at `.git/hooks/commit-msg` that strips
+those trailers from every message. Hooks live inside `.git/`, so they are *not* committed and
+*do not survive a fresh clone* — if this repository is ever re-cloned, write the hook again
+before the first commit (it is six lines; the text is in the file itself, and in the session-4d
+transcript).
+
+Verification after the rewrite, which is the check to repeat if it is ever in doubt:
+
+```bash
+gh api repos/sunkaramahesh09/moto-music/contributors --jq '.[] | "\(.login) \(.contributions)"'
+git log --format='%an <%ae>%n%b' origin/main | grep -i claude   # expect no output
+git ls-remote --heads --tags origin                             # expect only refs/heads/main
+```
+
+All three were clean. GitHub's **Contributors sidebar is a cached view** that is recomputed
+asynchronously and kept showing "claude" for a while after the data was already clean — that
+panel is not evidence, the API is. The next push refreshes it.
+
+**CI**: `.github/workflows/build.yml` ran for the first time on the initial push and **passed**
+(assemble + unit tests + lint on `ubuntu-latest`). The worry that AGP 9.3.2 with compileSdk 37.1
+would need an explicit SDK package on the runner turned out to be unfounded.
+
+**No release exists yet** — see section 6, item 0. Do not cut one from a `-debugsigned` APK.
+
+---
+
 ## 3. File map (`app/src/main/java/com/motomusic/app/`)
 
 ```
@@ -331,6 +377,11 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 - **A hidden song must also leave the queue.** Hiding only rewrote the library, so the file the
   user had just hidden carried on playing in the mini player.
   `PlaybackConnection.removeSongFromQueue` now runs first.
+- **`gh api -f 'names[]=x'` breaks under zsh.** The brackets glob, and the command dies with
+  `(eval):2: no matches found`. Build the JSON and pipe it in with `--input -` instead.
+- **A force-push does not update GitHub's Contributors panel.** It is computed from a cached
+  statistics table on GitHub's own schedule; the `/contributors` API is the truth. Do not chase a
+  stale sidebar with more rewrites.
 - **`hiltViewModel`** now lives in `androidx.hilt.lifecycle.viewmodel.compose`, not
   `androidx.hilt.navigation.compose`.
 - **Auto-mirrored icons**: `Icons.AutoMirrored.Rounded.{Sort, QueueMusic, TrendingUp, ArrowBack,
@@ -348,10 +399,20 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 
 *(Walking every screen is done — 2026-09-01. See "Verified on real hardware".)*
 
-0. **Before the repository goes public**: create a real release keystore and back it up (losing
-   it means never updating the app again), and watch the first CI run, since
-   `.github/workflows/build.yml` has never executed (AGP 9.3.2 with compileSdk 37.1 may need an
-   explicit SDK package on the runner). Screenshots are done.
+0. **Create the release keystore, then cut v0.1.0.** This is the one thing blocking a release;
+   the repository is public and CI is green. The user runs the `keytool` step themselves:
+
+   ```bash
+   keytool -genkeypair -v -keystore ~/moto-music-release.jks -alias moto \
+     -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+   Then a `keystore.properties` in the project root (git-ignored) with `storeFile`,
+   `storePassword`, `keyAlias`, `keyPassword`; `./gradlew :app:assembleRelease` must then produce
+   a version name of plain `0.1.0` with **no `-debugsigned` suffix** — that suffix is the signal
+   the APK is unpublishable. **Back the `.jks` and its passwords up somewhere that survives this
+   laptop**: losing them means never being able to update the app for anyone who installed it.
+   Publish with `gh release create v0.1.0 <apk> --title … --notes …`.
 
 1. **Test the paths a walkthrough cannot reach**: lock-screen and Bluetooth transport controls,
    pause on headphone disconnect, the sleep timer actually firing, and "resume last session"
@@ -368,6 +429,15 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 ---
 
 ## 7. Session log
+
+**2026-09-02 (session 4d)** — published the repository. Created
+`sunkaramahesh09/moto-music` and pushed the four commits; the first CI run passed unchanged.
+The user then objected to the `Co-Authored-By: Claude` trailers GitHub was showing as a second
+contributor, so history was rewritten with `filter-branch --msg-filter` and force-pushed, and a
+local `commit-msg` hook now strips those trailers from every future commit. Verified from the
+API that the remote carries one contributor, no trailers and a single ref; the Contributors
+sidebar kept showing the old entry for a while because it is cached, not because anything was
+left behind. No app code changed this session. See section 2c.
 
 **2026-09-01 (session 4c)** — README screenshots. Cleaned the site branding out of the user's
 own tags with `mutagen` (backed up first), then found the same branding burned into the cover
