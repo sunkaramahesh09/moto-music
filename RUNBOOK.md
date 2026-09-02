@@ -271,7 +271,49 @@ Android version cannot be acted on, and this app has run on exactly one device.
 Turning "applies to administrators" on would mean every runbook edit needs a pull request. That
 is a fine choice later; it is not the right one for a solo maintainer today.
 
-**No release exists yet** — see section 6, item 0. Do not cut one from a `-debugsigned` APK.
+**v0.1.0 is released** — https://github.com/sunkaramahesh09/moto-music/releases/tag/v0.1.0,
+cut 2026-09-02 with `moto-music-0.1.0.apk`
+(`sha256 5f36066ef3020be60d2ebb7ed754b88097c5a45a57211753b082cf807e7de617`). Still never cut one
+from a `-debugsigned` APK. See section 2d for the signing key.
+
+---
+
+## 2d. The signing key
+
+Created 2026-09-02, and there is exactly one of it. Everything below is what an update to an
+already-installed app depends on:
+
+| What | Where |
+| --- | --- |
+| Keystore | `~/moto-music-release.jks` (PKCS12, RSA 2048, valid to 2054-01-18) |
+| Password | `~/.moto-music-keystore-password`, `chmod 600` — same for store and key |
+| Alias | `moto` |
+| Certificate | `CN=Moto Music, O=Moto Music`, SHA-256 `E9:0D:5A:3A:00:E9:D6:AD:FF:3A:FB:96:EC:DC:A3:C4:E8:E7:FF:9E:CD:E5:F8:0A:15:B4:63:8B:10:15:F5:51` |
+
+`keystore.properties` in the project root points at all of it and is git-ignored, along with
+`*.jks` — checked with `git check-ignore` before the first release build, and worth re-checking
+after any `.gitignore` edit.
+
+**Losing this key ends the app.** Not "makes the next release awkward": Android identifies an app
+by its signing certificate, so nobody who installed 0.1.0 could ever install 0.1.1. There is no
+appeal and no reset, because the whole point of the signature is that nobody — including the
+author — can forge it. As of 2026-09-02 the only copies are on this laptop.
+
+**Checking a build is signed with it**, which is the check to run before every release:
+
+```bash
+$ANDROID_HOME/build-tools/37.0.0/apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+```
+
+The certificate SHA-256 it prints must equal the one in the table. If the version name carries
+`-debugsigned`, Gradle never found `keystore.properties` at all.
+
+**The old debug-signed build had to be uninstalled by hand.** The phone was carrying
+`0.1.0-debugsigned` from the 2026-09-01 performance test, and the properly signed APK would not
+install over it — different certificate, so Android treats it as a different app. `adb uninstall
+com.motomusic.app` first, which also wipes that build's playlists and play counts. This is the
+wall the `-debugsigned` rule exists to keep users away from; it cost one uninstall here because
+the only person affected was the author.
 
 ---
 
@@ -436,20 +478,9 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 
 *(Walking every screen is done — 2026-09-01. See "Verified on real hardware".)*
 
-0. **Create the release keystore, then cut v0.1.0.** This is the one thing blocking a release;
-   the repository is public and CI is green. The user runs the `keytool` step themselves:
-
-   ```bash
-   keytool -genkeypair -v -keystore ~/moto-music-release.jks -alias moto \
-     -keyalg RSA -keysize 2048 -validity 10000
-   ```
-
-   Then a `keystore.properties` in the project root (git-ignored) with `storeFile`,
-   `storePassword`, `keyAlias`, `keyPassword`; `./gradlew :app:assembleRelease` must then produce
-   a version name of plain `0.1.0` with **no `-debugsigned` suffix** — that suffix is the signal
-   the APK is unpublishable. **Back the `.jks` and its passwords up somewhere that survives this
-   laptop**: losing them means never being able to update the app for anyone who installed it.
-   Publish with `gh release create v0.1.0 <apk> --title … --notes …`.
+0. ~~Create the release keystore, then cut v0.1.0.~~ **Done 2026-09-02** — section 2d.
+   The one thing still owed: the user copying the keystore and its password somewhere that
+   survives this laptop.
 
 1. **Test the paths a walkthrough cannot reach**: lock-screen and Bluetooth transport controls,
    pause on headphone disconnect, the sleep timer actually firing, and "resume last session"
@@ -466,6 +497,15 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 ---
 
 ## 7. Session log
+
+**2026-09-02 (session 4e)** — shipped v0.1.0. Generated the release keystore with a random
+32-character password (section 2d), built `assembleRelease`, and confirmed the APK carried the new
+certificate and a clean `0.1.0` version name rather than `-debugsigned`. Installed it on the phone
+— which first needed the old debug-signed build uninstalled — and verified it end to end: no crash
+under R8, library scanned, a tapped song produced a started `AudioTrack` at 44.1 kHz, and
+`KEYCODE_MEDIA_PAUSE` paused it, which is the first evidence for the media-button path section 6
+item 1 still lists as unverified. Then `gh release create v0.1.0` with the APK and its checksum,
+and README gained a Download section. No app code changed.
 
 **2026-09-02 (session 4d)** — published the repository. Created
 `sunkaramahesh09/moto-music` and pushed the four commits; the first CI run passed unchanged.
