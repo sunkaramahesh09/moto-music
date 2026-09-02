@@ -9,6 +9,52 @@ needs a conversation first.
 Open an issue for anything larger than a fix. It saves you writing code that does not fit, and it
 gives other people somewhere to say "I want that too".
 
+## How to send a change
+
+If you have not done this on GitHub before, the whole flow is:
+
+1. **Fork this repository** — the Fork button, top right. You now have your own copy at
+   `github.com/<you>/moto-music`, which you can push to freely.
+
+2. **Clone your fork and branch off `main`:**
+
+   ```bash
+   git clone https://github.com/<you>/moto-music.git
+   cd moto-music
+   git checkout -b short-name-for-the-change
+   ```
+
+3. **Make the change**, running the checks in the next section as you go.
+
+4. **Commit and push to your fork:**
+
+   ```bash
+   git commit -am "Explain why, not what"
+   git push -u origin short-name-for-the-change
+   ```
+
+5. **Open the pull request.** GitHub offers a "Compare & pull request" button on your fork right
+   after you push; the target is `sunkaramahesh09/moto-music`, branch `main`.
+
+CI builds every pull request — unit tests, lint and a debug APK — so nobody has to take your word
+for it compiling on a clean machine, and you get a downloadable APK of your own change out of it.
+A red cross is not a rejection: open the log, fix what it found, and push again to the same
+branch. The pull request updates itself; do not open a second one.
+
+If review takes a while and `main` moves on:
+
+```bash
+git remote add upstream https://github.com/sunkaramahesh09/moto-music.git
+git fetch upstream
+git rebase upstream/main
+git push --force-with-lease
+```
+
+**You do not need an Android phone to be useful here.** Tests, documentation, translations and
+review all happen on a laptop. What is genuinely hardest to get is the opposite — this app has
+been exercised on exactly one phone, so "I ran it on a Pixel and here is what broke" is worth
+more than most patches.
+
 ## Building and checking
 
 ```bash

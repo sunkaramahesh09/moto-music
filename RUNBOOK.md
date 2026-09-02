@@ -242,12 +242,34 @@ The only two real fixes are to delete the repository and push the clean history 
 all zero and the tree is in sync), or to ask GitHub Support to garbage-collect the unreachable
 objects and rebuild the contributors index. Waiting does not work.
 
+**Decided 2026-09-02: leave it.** Neither fix is worth it for a cosmetic sidebar entry, so the
+repository stays as it is and the panel keeps listing two contributors. Do not re-open this —
+no more rewrites, and do not delete the repository over it.
+
 **So: never let the trailer reach GitHub in the first place.** That is what the hook is for, and
 why re-creating it after any fresh clone matters.
 
 **CI**: `.github/workflows/build.yml` ran for the first time on the initial push and **passed**
 (assemble + unit tests + lint on `ubuntu-latest`). The worry that AGP 9.3.2 with compileSdk 37.1
 would need an explicit SDK package on the runner turned out to be unfounded.
+
+**Taking contributions** (set up 2026-09-02). CONTRIBUTING.md now spells out the fork → branch →
+pull request flow, and `.github/` carries two issue forms and a pull request template. Blank
+issues are turned **off** (`ISSUE_TEMPLATE/config.yml`): a bug report without the phone model and
+Android version cannot be acted on, and this app has run on exactly one device.
+
+`main` is protected — the settings, and why each one is what it is:
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Required status check | `check` | The job id in `build.yml`; this is the name GitHub sees |
+| Require branches up to date | off | Pointless friction on a repo with no merge traffic |
+| Applies to administrators | **off** | So the maintainer can still push to `main` directly |
+| Force pushes / deletions | off | — |
+| Require conversations resolved | on | — |
+
+Turning "applies to administrators" on would mean every runbook edit needs a pull request. That
+is a fine choice later; it is not the right one for a solo maintainer today.
 
 **No release exists yet** — see section 6, item 0. Do not cut one from a `-debugsigned` APK.
 

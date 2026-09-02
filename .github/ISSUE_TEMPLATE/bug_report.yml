@@ -1,0 +1,76 @@
+name: Bug report
+description: Something in the app does not work the way it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The two things that make a bug fixable here are **which phone** and
+        **what you did** — this app has only ever been tested on one device, so almost every
+        report is on hardware nobody has tried yet.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did the app do, and what did you expect instead?
+      placeholder: |
+        Pressing pause stopped the music but the notification kept showing the pause button.
+        I expected it to switch to a play button.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Number them, starting from a freshly opened app.
+      placeholder: |
+        1. Open the app
+        2. Play any song from Songs
+        3. Lock the phone
+        4. Press pause on the lock screen
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Phone and Android version
+      placeholder: moto g54 5G, Android 15
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Settings → About, at the bottom.
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where the build came from
+      options:
+        - A release APK from this repository
+        - Built from source myself
+        - Somewhere else
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output, if you have it
+      description: |
+        Optional, and only if the app crashed or misbehaved while you had a computer to hand:
+
+        ```
+        adb logcat -b crash -d
+        ```
+
+        Paste it as-is; it is formatted automatically.
+      render: text

@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest something the app should do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a deliberately small app. The best requests describe a problem you actually hit
+        while listening to music, rather than a feature another player has.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What were you trying to do, and what got in the way?
+      placeholder: |
+        I listen to long podcasts and lose my place, because closing the app forgets the
+        position within the track.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you tried instead
+      description: Existing settings or workarounds that nearly worked, and why they did not.
+
+  - type: checkboxes
+    id: offline
+    attributes:
+      label: Scope
+      description: |
+        The app holds no `INTERNET` permission, and that is the point of it — lyrics fetching,
+        online artwork, scrobbling and streaming are all out of scope, permanently.
+      options:
+        - label: This can work with no network access at all
+          required: true
