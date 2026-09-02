@@ -15,6 +15,23 @@ which you can verify yourself in one line of the manifest.
 > **Not affiliated with Motorola or Lenovo.** "Moto Music" is an independent hobby project and is
 > neither endorsed by nor connected to any phone manufacturer.
 
+## Download
+
+**[Download the latest APK](https://github.com/sunkaramahesh09/moto-music/releases/latest)** — needs
+Android 8.0 or newer. There is no Play Store listing, so the phone will ask you to allow installing
+from unknown sources for whichever app you downloaded it with, and Play Protect may warn that the
+developer is unknown. That warning means the app has not been through Google's review, not that
+anything was found in it.
+
+Check you got the file that was published, rather than trusting the download:
+
+```bash
+sha256sum moto-music-0.1.0.apk   # compare with the checksum in the release notes
+```
+
+The debug build from CI is *not* a substitute for a release: it is unoptimised, and it installs
+under a different application id.
+
 ## Screenshots
 
 | Home | Songs | Albums | Player |
