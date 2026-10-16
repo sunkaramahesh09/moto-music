@@ -26,4 +26,24 @@ data class UserPreferences(
     /** Individual files the user hid by hand, by [Song.hideKey]. */
     val hiddenSongKeys: Set<String> = emptySet(),
     val hasCompletedWelcome: Boolean = false,
+    /**
+     * Send audio to the output in 32-bit float instead of squeezing it to 16-bit, so lossless
+     * and hi-res files keep their full resolution. It bypasses Media3's own audio processors,
+     * which is why it cannot be combined with [skipSilence].
+     */
+    val highResOutput: Boolean = true,
+    val equalizer: EqualizerSettings = EqualizerSettings(),
+) {
+    /** What the player actually does: skip silence wins for anyone who had it on already. */
+    val useHighResOutput: Boolean get() = highResOutput && !skipSilence
+}
+
+/**
+ * The user's equalizer. [customLevelsMb] are per device band, in millibels, and only mean
+ * something on the device that produced them — a mismatch in band count falls back to flat.
+ */
+data class EqualizerSettings(
+    val enabled: Boolean = false,
+    val presetKey: String = "flat",
+    val customLevelsMb: List<Int> = emptyList(),
 )

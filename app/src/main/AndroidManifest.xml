@@ -25,6 +25,7 @@
     <application
         android:name=".MotoMusicApplication"
         android:allowBackup="true"
+        android:appCategory="audio"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -45,8 +46,19 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!--
+              How Android recognises a music player: appCategory="audio" files the app under
+              Audio in settings, battery and data usage; the APP_MUSIC category makes it a
+              candidate when the system or another app asks for "the music app"; and
+              MUSIC_PLAYER is the older action some launchers and car head units still send.
+            -->
             <intent-filter>
-                <action android:name="android.intent.action.APP_MUSIC" />
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MUSIC_PLAYER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

@@ -20,6 +20,7 @@ object MediaItemMapper {
     const val EXTRA_ALBUM_ID = "moto.album_id"
     const val EXTRA_DURATION_MS = "moto.duration_ms"
     const val EXTRA_SONG_URI = "moto.song_uri"
+    const val EXTRA_MIME_TYPE = "moto.mime_type"
 
     private val ALBUM_ART_BASE_URI: Uri = "content://media/external/audio/albumart".toUri()
 
@@ -32,6 +33,7 @@ object MediaItemMapper {
             putLong(EXTRA_ALBUM_ID, song.albumId)
             putLong(EXTRA_DURATION_MS, song.durationMs)
             putString(EXTRA_SONG_URI, song.uri)
+            putString(EXTRA_MIME_TYPE, song.mimeType)
         }
         val metadata = MediaMetadata.Builder()
             .setTitle(song.title)
@@ -74,6 +76,7 @@ object MediaItemMapper {
             songUri = extras?.getString(EXTRA_SONG_URI)
                 ?: item.requestMetadata.mediaUri?.toString(),
             durationMs = extras?.getLong(EXTRA_DURATION_MS) ?: 0L,
+            mimeType = extras?.getString(EXTRA_MIME_TYPE).orEmpty(),
         )
     }
 }
@@ -87,4 +90,19 @@ data class TrackInfo(
     val albumId: Long,
     val songUri: String?,
     val durationMs: Long,
-)
+    val mimeType: String = "",
+) {
+    /**
+     * A short format label for lossless files — "FLAC", "WAV" — or null for lossy and unknown
+     * ones. ALAC usually hides inside an `.m4a` reported as plain `audio/mp4`, so it is only
+     * recognised when the platform says so outright.
+     */
+    val losslessFormat: String?
+        get() = when (mimeType.lowercase()) {
+            "audio/flac", "audio/x-flac" -> "FLAC"
+            "audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave" -> "WAV"
+            "audio/alac", "audio/x-alac" -> "ALAC"
+            "audio/aiff", "audio/x-aiff" -> "AIFF"
+            else -> null
+        }
+}

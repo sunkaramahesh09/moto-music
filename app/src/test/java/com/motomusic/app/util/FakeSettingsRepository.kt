@@ -37,6 +37,20 @@ class FakeSettingsRepository(
     override suspend fun setHideVoiceRecordings(enabled: Boolean) =
         update { copy(hideVoiceRecordings = enabled) }
 
+    override suspend fun setHighResOutput(enabled: Boolean) = update { copy(highResOutput = enabled) }
+
+    override suspend fun setEqualizerEnabled(enabled: Boolean) =
+        update { copy(equalizer = equalizer.copy(enabled = enabled)) }
+
+    override suspend fun setEqualizerPreset(presetKey: String, customLevelsMb: List<Int>?) = update {
+        copy(
+            equalizer = equalizer.copy(
+                presetKey = presetKey,
+                customLevelsMb = customLevelsMb ?: equalizer.customLevelsMb,
+            ),
+        )
+    }
+
     override suspend fun setSongHidden(hideKey: String, hidden: Boolean) = update {
         copy(hiddenSongKeys = if (hidden) hiddenSongKeys + hideKey else hiddenSongKeys - hideKey)
     }

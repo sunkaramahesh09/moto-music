@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -36,6 +39,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,10 +58,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.motomusic.app.core.formatDuration
+import com.motomusic.app.playback.AudioOutput
 import com.motomusic.app.playback.PlaybackPosition
 import com.motomusic.app.playback.PlaybackUiState
 import com.motomusic.app.playback.RepeatMode
 import com.motomusic.app.playback.SleepTimerState
+import com.motomusic.app.presentation.audio.AudioOutputChip
 import com.motomusic.app.ui.components.LargeArtworkImage
 import kotlinx.coroutines.delay
 
@@ -87,6 +93,11 @@ fun PlayerScreen(
     onOpenQueue: () -> Unit,
     onOpenSleepTimer: () -> Unit,
     onOpenMenu: () -> Unit,
+    output: AudioOutput?,
+    outputPinned: Boolean,
+    equalizerOn: Boolean,
+    onOpenOutputs: () -> Unit,
+    onOpenEqualizer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val track = playback.current
@@ -171,6 +182,11 @@ fun PlayerScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            track?.losslessFormat?.let { format ->
+                Spacer(Modifier.height(10.dp))
+                LosslessBadge(format)
+            }
+
             Spacer(Modifier.height(20.dp))
 
             SeekSection(
@@ -234,25 +250,38 @@ fun PlayerScreen(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(20.dp))
+
+            // Output on the left, sound shaping and favourite on the right: the things you reach
+            // for while listening, within thumb range instead of up in the top bar.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AudioOutputChip(
+                    output = output,
+                    pinned = outputPinned,
+                    onClick = onOpenOutputs,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ToggleIconButton(
+                        icon = Icons.Rounded.Equalizer,
+                        contentDescription = if (equalizerOn) "Equalizer on" else "Equalizer off",
+                        active = equalizerOn,
+                        onClick = onOpenEqualizer,
+                    )
+                    FavoriteButton(isFavorite = isFavorite, enabled = track != null, onClick = onToggleFavorite)
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onToggleFavorite, enabled = track != null) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
-                        tint = if (isFavorite) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                }
-
                 val timer = sleepTimer
                 if (timer is SleepTimerState.Countdown) {
                     Text(
@@ -260,7 +289,7 @@ fun PlayerScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .padding(start = 8.dp)
+                            .padding(top = 12.dp)
                             .clickable(onClick = onOpenSleepTimer),
                     )
                 } else if (timer is SleepTimerState.EndOfTrack) {
@@ -269,7 +298,7 @@ fun PlayerScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .padding(start = 8.dp)
+                            .padding(top = 12.dp)
                             .clickable(onClick = onOpenSleepTimer),
                     )
                 }
@@ -362,6 +391,33 @@ private fun ToggleIconButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun FavoriteButton(isFavorite: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = enabled) {
+        Icon(
+            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+            contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
+            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** "FLAC · Lossless": shown only when the file itself is lossless, never as decoration. */
+@Composable
+private fun LosslessBadge(format: String) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Text(
+            text = "$format · Lossless",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
         )
     }
 }

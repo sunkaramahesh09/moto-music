@@ -16,6 +16,11 @@ interface SettingsRepository {
     suspend fun setPauseOnHeadphonesDisconnect(enabled: Boolean)
     suspend fun setFadeOnPlayPause(enabled: Boolean)
     suspend fun setHideVoiceRecordings(enabled: Boolean)
+    suspend fun setHighResOutput(enabled: Boolean)
+    suspend fun setEqualizerEnabled(enabled: Boolean)
+
+    /** Selects a preset; [customLevelsMb] is stored too when the preset is the custom one. */
+    suspend fun setEqualizerPreset(presetKey: String, customLevelsMb: List<Int>? = null)
 
     /** Hides or restores one file, keyed by `Song.hideKey`. */
     suspend fun setSongHidden(hideKey: String, hidden: Boolean)

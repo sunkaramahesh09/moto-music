@@ -1,11 +1,21 @@
 package com.motomusic.app.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,13 +37,11 @@ import com.motomusic.app.presentation.folders.FoldersScreen
 import com.motomusic.app.presentation.folders.FoldersViewModel
 import com.motomusic.app.presentation.home.HomeScreen
 import com.motomusic.app.presentation.home.HomeViewModel
-import com.motomusic.app.presentation.player.PlayerScreen
 import com.motomusic.app.presentation.player.PlayerViewModel
 import com.motomusic.app.presentation.playlists.PlaylistDetailsScreen
 import com.motomusic.app.presentation.playlists.PlaylistDetailsViewModel
 import com.motomusic.app.presentation.playlists.PlaylistsScreen
 import com.motomusic.app.presentation.playlists.PlaylistsViewModel
-import com.motomusic.app.presentation.queue.QueueScreen
 import com.motomusic.app.presentation.search.SearchScreen
 import com.motomusic.app.presentation.search.SearchViewModel
 import com.motomusic.app.presentation.settings.AboutScreen
@@ -54,12 +62,19 @@ fun MotoNavHost(
     contentPadding: PaddingValues,
     playerViewModel: PlayerViewModel,
     onRescan: () -> Unit,
+    onOpenEqualizer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
         navController = navController,
         startDestination = Routes.HOME,
         modifier = modifier,
+        enterTransition = { if (isTopLevelSwitch()) fadeThroughIn() else sharedAxisIn(forward = true) },
+        exitTransition = { if (isTopLevelSwitch()) fadeThroughOut() else sharedAxisOut(forward = true) },
+        popEnterTransition = { if (isTopLevelSwitch()) fadeThroughIn() else sharedAxisIn(forward = false) },
+        popExitTransition = { if (isTopLevelSwitch()) fadeThroughOut() else sharedAxisOut(forward = false) },
+        // Every screen fills the same space; animating the size would only make lists jump.
+        sizeTransform = null,
     ) {
         composable(Routes.HOME) {
             val viewModel: HomeViewModel = hiltViewModel()
@@ -218,44 +233,6 @@ fun MotoNavHost(
             )
         }
 
-        composable(Routes.PLAYER) {
-            val playback by playerViewModel.playback.collectAsStateWithLifecycle()
-            val position = playerViewModel.position.collectAsStateWithLifecycle()
-            val favoriteIds by playerViewModel.favoriteIds.collectAsStateWithLifecycle()
-            val sleepTimer by playerViewModel.sleepTimer.collectAsStateWithLifecycle()
-            val currentSongId = playback.current?.songId
-            PlayerScreen(
-                playback = playback,
-                position = position,
-                isFavorite = currentSongId != null && currentSongId in favoriteIds,
-                sleepTimer = sleepTimer,
-                onBack = navController::popBackStack,
-                onPlayPause = playerViewModel::togglePlayPause,
-                onNext = playerViewModel::next,
-                onPrevious = playerViewModel::previous,
-                onSeek = playerViewModel::seekTo,
-                onToggleShuffle = playerViewModel::toggleShuffle,
-                onCycleRepeat = playerViewModel::cycleRepeatMode,
-                onToggleFavorite = playerViewModel::toggleFavoriteForCurrent,
-                onOpenQueue = { navController.navigateTo(Routes.QUEUE) },
-                onOpenSleepTimer = playerViewModel::openSleepTimer,
-                onOpenMenu = { playerViewModel.openMenuForCurrentSong() },
-            )
-        }
-
-        composable(Routes.QUEUE) {
-            val playback by playerViewModel.playback.collectAsStateWithLifecycle()
-            QueueScreen(
-                playback = playback,
-                contentPadding = contentPadding,
-                onBack = navController::popBackStack,
-                onPlayIndex = playerViewModel::skipToQueueIndex,
-                onRemove = playerViewModel::removeFromQueue,
-                onMove = playerViewModel::moveQueueItem,
-                onClear = playerViewModel::clearQueue,
-            )
-        }
-
         composable(Routes.SETTINGS) {
             val viewModel: SettingsViewModel = hiltViewModel()
             val state by viewModel.state.collectAsStateWithLifecycle()
@@ -270,6 +247,8 @@ fun MotoNavHost(
                 onPauseOnHeadphonesChange = { viewModel.setPauseOnHeadphonesDisconnect(it) },
                 onFadeOnPlayPauseChange = { viewModel.setFadeOnPlayPause(it) },
                 onHideVoiceRecordingsChange = { viewModel.setHideVoiceRecordings(it) },
+                onHighResOutputChange = { viewModel.setHighResOutput(it) },
+                onOpenEqualizer = onOpenEqualizer,
                 onUnhideSong = { viewModel.unhideSong(it) },
                 onUnhideAllSongs = { viewModel.unhideAllSongs() },
                 onRescan = { viewModel.rescan() },
@@ -283,6 +262,47 @@ fun MotoNavHost(
         }
     }
 }
+
+/*
+ * Transitions follow Material motion. Moving between the bottom-bar tabs is a fade-through:
+ * the tabs are siblings, so nothing slides. Going deeper (an album, Settings) is a shared-axis
+ * step: the new screen comes in a little from the side it lives on and the old one drifts the
+ * other way, which tells the user which way Back will go.
+ */
+
+private val topLevelRoutes = TopLevelDestination.entries.map { it.route }.toSet()
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTopLevelSwitch(): Boolean =
+    initialState.destination.route in topLevelRoutes && targetState.destination.route in topLevelRoutes
+
+private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+
+private const val SHARED_AXIS_MS = 350
+private const val FADE_THROUGH_MS = 300
+
+/** Fraction of the width a screen travels: enough to read as direction, not as a page flip. */
+private const val SHARED_AXIS_TRAVEL = 0.15f
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.sharedAxisIn(forward: Boolean): EnterTransition =
+    slideIntoContainer(
+        towards = if (forward) SlideDirection.Start else SlideDirection.End,
+        animationSpec = tween(SHARED_AXIS_MS, easing = EmphasizedDecelerate),
+        initialOffset = { (it * SHARED_AXIS_TRAVEL).toInt() },
+    ) + fadeIn(tween(SHARED_AXIS_MS / 2, delayMillis = SHARED_AXIS_MS / 6))
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.sharedAxisOut(forward: Boolean): ExitTransition =
+    slideOutOfContainer(
+        towards = if (forward) SlideDirection.Start else SlideDirection.End,
+        animationSpec = tween(SHARED_AXIS_MS, easing = EmphasizedAccelerate),
+        targetOffset = { (it * SHARED_AXIS_TRAVEL).toInt() },
+    ) + fadeOut(tween(SHARED_AXIS_MS / 3))
+
+private fun fadeThroughIn(): EnterTransition =
+    fadeIn(tween(FADE_THROUGH_MS * 7 / 10, delayMillis = FADE_THROUGH_MS * 3 / 10)) +
+        scaleIn(tween(FADE_THROUGH_MS * 7 / 10, delayMillis = FADE_THROUGH_MS * 3 / 10), initialScale = 0.94f)
+
+private fun fadeThroughOut(): ExitTransition = fadeOut(tween(FADE_THROUGH_MS * 3 / 10))
 
 /** Ordinary forward navigation: one copy of a destination at a time, state kept on the way back. */
 fun NavHostController.navigateTo(route: String) {

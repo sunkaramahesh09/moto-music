@@ -4,6 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -29,9 +33,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,6 +48,7 @@ import com.motomusic.app.playback.TrackInfo
 /**
  * The persistent player strip above the bottom navigation.
  *
+ * Swiping it up opens the full player, the counterpart of swiping the player down to close it.
  * Swiping it sideways stops playback and clears the queue, which is the only way the strip can
  * be dismissed — otherwise there would be no way back to it.
  *
@@ -53,6 +61,7 @@ fun MiniPlayer(
     isPlaying: Boolean,
     progress: () -> Float,
     onPlayPause: () -> Unit,
+    onPrevious: () -> Unit,
     onNext: () -> Unit,
     onExpand: () -> Unit,
     onDismiss: () -> Unit,
@@ -74,6 +83,11 @@ fun MiniPlayer(
             if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) onDismiss()
         }
 
+        val density = LocalDensity.current
+        val expandDistance = with(density) { SWIPE_UP_DISTANCE.toPx() }
+        val expandVelocity = with(density) { SWIPE_UP_VELOCITY.toPx() }
+        val dragTotal = remember { mutableFloatStateOf(0f) }
+
         SwipeToDismissBox(
             state = dismissState,
             backgroundContent = {},
@@ -92,6 +106,14 @@ fun MiniPlayer(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(onClick = onExpand)
+                        .draggable(
+                            state = rememberDraggableState { dragTotal.floatValue += it },
+                            orientation = Orientation.Vertical,
+                            onDragStarted = { dragTotal.floatValue = 0f },
+                            onDragStopped = { velocity ->
+                                if (dragTotal.floatValue < -expandDistance || velocity < -expandVelocity) onExpand()
+                            },
+                        )
                             .semantics { contentDescription = "Now playing: ${track.title}. Open player." }
                             .padding(horizontal = 8.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -118,6 +140,9 @@ fun MiniPlayer(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
+                        IconButton(onClick = onPrevious) {
+                            Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous song")
+                        }
                         IconButton(onClick = onPlayPause) {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
@@ -142,6 +167,9 @@ fun MiniPlayer(
         }
     }
 }
+
+private val SWIPE_UP_DISTANCE = 32.dp
+private val SWIPE_UP_VELOCITY = 600.dp
 
 /** Height reserved for the mini player so lists can pad their last item. */
 val MiniPlayerHeight = 72.dp

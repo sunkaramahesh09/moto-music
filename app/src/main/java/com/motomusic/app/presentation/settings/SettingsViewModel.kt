@@ -58,6 +58,10 @@ class SettingsViewModel @Inject constructor(
     fun setFadeOnPlayPause(enabled: Boolean) =
         viewModelScope.launch { settingsRepository.setFadeOnPlayPause(enabled) }
 
+    /** The player rebuilds itself when this flips; the queue and position carry over. */
+    fun setHighResOutput(enabled: Boolean) =
+        viewModelScope.launch { settingsRepository.setHighResOutput(enabled) }
+
     /** The library rescans itself when this flips; the repository watches the same setting. */
     fun setHideVoiceRecordings(enabled: Boolean) =
         viewModelScope.launch { settingsRepository.setHideVoiceRecordings(enabled) }

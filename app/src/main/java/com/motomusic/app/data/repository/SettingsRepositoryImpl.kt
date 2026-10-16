@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.motomusic.app.data.local.prefs.settingsDataStore
+import com.motomusic.app.domain.model.EqualizerSettings
 import com.motomusic.app.domain.model.SortOrder
 import com.motomusic.app.domain.model.ThemeMode
 import com.motomusic.app.domain.model.UserPreferences
@@ -53,6 +54,15 @@ class SettingsRepositoryImpl @Inject constructor(
                 hideVoiceRecordings = prefs[KEY_HIDE_VOICE_RECORDINGS] ?: true,
                 hiddenSongKeys = prefs[KEY_HIDDEN_SONGS].orEmpty(),
                 hasCompletedWelcome = prefs[KEY_WELCOME_DONE] ?: false,
+                highResOutput = prefs[KEY_HIGH_RES_OUTPUT] ?: true,
+                equalizer = EqualizerSettings(
+                    enabled = prefs[KEY_EQ_ENABLED] ?: false,
+                    presetKey = prefs[KEY_EQ_PRESET] ?: EqualizerSettings().presetKey,
+                    customLevelsMb = prefs[KEY_EQ_CUSTOM_LEVELS]
+                        ?.split(',')
+                        ?.mapNotNull { it.trim().toIntOrNull() }
+                        .orEmpty(),
+                ),
             )
         }
 
@@ -73,6 +83,15 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setHideVoiceRecordings(enabled: Boolean) =
         edit { it[KEY_HIDE_VOICE_RECORDINGS] = enabled }
+
+    override suspend fun setHighResOutput(enabled: Boolean) = edit { it[KEY_HIGH_RES_OUTPUT] = enabled }
+
+    override suspend fun setEqualizerEnabled(enabled: Boolean) = edit { it[KEY_EQ_ENABLED] = enabled }
+
+    override suspend fun setEqualizerPreset(presetKey: String, customLevelsMb: List<Int>?) = edit {
+        it[KEY_EQ_PRESET] = presetKey
+        if (customLevelsMb != null) it[KEY_EQ_CUSTOM_LEVELS] = customLevelsMb.joinToString(",")
+    }
 
     override suspend fun setSongHidden(hideKey: String, hidden: Boolean) {
         if (hideKey.isEmpty()) return
@@ -131,6 +150,10 @@ class SettingsRepositoryImpl @Inject constructor(
         val KEY_HIDE_VOICE_RECORDINGS = booleanPreferencesKey("hide_voice_recordings")
         val KEY_HIDDEN_SONGS = stringSetPreferencesKey("hidden_song_keys")
         val KEY_WELCOME_DONE = booleanPreferencesKey("welcome_completed")
+        val KEY_HIGH_RES_OUTPUT = booleanPreferencesKey("high_res_output")
+        val KEY_EQ_ENABLED = booleanPreferencesKey("equalizer_enabled")
+        val KEY_EQ_PRESET = stringPreferencesKey("equalizer_preset")
+        val KEY_EQ_CUSTOM_LEVELS = stringPreferencesKey("equalizer_custom_levels")
         val KEY_QUEUE_IDS = stringPreferencesKey("last_queue_ids")
         val KEY_QUEUE_INDEX = intPreferencesKey("last_queue_index")
         val KEY_QUEUE_POSITION = longPreferencesKey("last_queue_position")

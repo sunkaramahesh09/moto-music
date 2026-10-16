@@ -10,6 +10,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
@@ -60,6 +61,8 @@ class MusicService : MediaSessionService() {
     @Inject lateinit var sleepTimerController: SleepTimerController
     @Inject lateinit var eventBus: PlaybackEventBus
     @Inject lateinit var bitmapLoader: MotoBitmapLoader
+    @Inject lateinit var equalizerController: EqualizerController
+    @Inject lateinit var audioOutputController: AudioOutputController
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -69,6 +72,11 @@ class MusicService : MediaSessionService() {
     private var fadingPlayer: FadingPlayer? = null
     private var mediaSession: MediaSession? = null
     private var progressJob: Job? = null
+    private val playerListener = PlayerListener()
+
+    /** Whether the current player was built for 32-bit float (hi-res) output. */
+    private var highResOutput = DEFAULT_HIGH_RES_OUTPUT
+    private var playbackSettings: PlaybackSettings? = null
 
     /** Guards against an unplayable library spinning through every track in a loop. */
     private var consecutiveErrors = 0
@@ -82,19 +90,7 @@ class MusicService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(C.USAGE_MEDIA)
-            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-            .build()
-
-        val exoPlayer = ExoPlayer.Builder(this)
-            // handleAudioFocus = true makes ExoPlayer duck and pause for calls and other apps.
-            .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
-            // Pauses when headphones are unplugged or a Bluetooth device disconnects.
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_LOCAL)
-            .build()
-        exoPlayer.addListener(PlayerListener())
+        val exoPlayer = buildPlayer(highResOutput)
         player = exoPlayer
 
         val fading = FadingPlayer(exoPlayer, serviceScope)
@@ -115,7 +111,9 @@ class MusicService : MediaSessionService() {
                 .apply { setSmallIcon(R.drawable.ic_notification) }
         )
 
+        equalizerController.attach(exoPlayer.audioSessionId)
         observeSettings()
+        observeAudioOutput()
         observeSleepTimer()
         startProgressLoop()
     }
@@ -138,6 +136,7 @@ class MusicService : MediaSessionService() {
     override fun onDestroy() {
         saveSession()
         progressJob?.cancel()
+        equalizerController.release()
         mediaSession?.run {
             player.release()
             release()
@@ -161,15 +160,98 @@ class MusicService : MediaSessionService() {
         )
     }
 
+    /**
+     * Lossless playback starts with the file, but it only reaches the ears intact if nothing on
+     * the way rounds it down. With float output on, ExoPlayer hands 24-bit and hi-res PCM to the
+     * platform as 32-bit float instead of truncating it to 16-bit. FLAC, ALAC and WAV decode
+     * natively, so no extension is needed for them.
+     */
+    private fun buildPlayer(highRes: Boolean): ExoPlayer {
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .build()
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setEnableAudioFloatOutput(highRes)
+
+        return ExoPlayer.Builder(this, renderersFactory)
+            // handleAudioFocus = true makes ExoPlayer duck and pause for calls and other apps.
+            .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
+            // Pauses when headphones are unplugged or a Bluetooth device disconnects.
+            .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_LOCAL)
+            .build()
+            .also { it.addListener(playerListener) }
+    }
+
+    /**
+     * Float output is fixed when a player is built, so changing it means a new player. The
+     * queue, position and play state carry over and the session simply switches to the new one,
+     * so every connected controller (the app, the notification, Bluetooth) follows along.
+     */
+    private fun rebuildPlayer(highRes: Boolean) {
+        val old = player ?: return
+        val session = mediaSession ?: return
+        highResOutput = highRes
+
+        val items = (0 until old.mediaItemCount).map(old::getMediaItemAt)
+        val index = old.currentMediaItemIndex
+        val positionMs = old.currentPosition
+        val playWhenReady = old.playWhenReady
+
+        val fresh = buildPlayer(highRes).apply {
+            shuffleModeEnabled = old.shuffleModeEnabled
+            repeatMode = old.repeatMode
+            playbackSettings?.let { applyPlaybackSettings(this, it) }
+            setPreferredAudioDevice(audioOutputController.preferredDevice.value)
+            if (items.isNotEmpty()) {
+                setMediaItems(items, index.coerceIn(0, items.lastIndex), positionMs.coerceAtLeast(0L))
+                prepare()
+            }
+        }
+        val fading = FadingPlayer(fresh, serviceScope).apply {
+            fadeEnabled = playbackSettings?.fadeOnPlayPause ?: true
+        }
+
+        // The session moves first, so controllers never see the old player go idle.
+        old.removeListener(playerListener)
+        session.player = fading
+        old.release()
+        player = fresh
+        fadingPlayer = fading
+        equalizerController.attach(fresh.audioSessionId)
+        if (playWhenReady && items.isNotEmpty()) fresh.play()
+    }
+
+    private fun applyPlaybackSettings(target: ExoPlayer, settings: PlaybackSettings) {
+        target.skipSilenceEnabled = settings.skipSilence
+        target.setHandleAudioBecomingNoisy(settings.pauseOnDisconnect)
+    }
+
     private fun observeSettings() {
         settingsRepository.preferences
-            .map { PlaybackSettings(it.skipSilence, it.pauseOnHeadphonesDisconnect, it.fadeOnPlayPause) }
+            .map {
+                PlaybackSettings(
+                    skipSilence = it.skipSilence,
+                    pauseOnDisconnect = it.pauseOnHeadphonesDisconnect,
+                    fadeOnPlayPause = it.fadeOnPlayPause,
+                    highResOutput = it.useHighResOutput,
+                )
+            }
             .distinctUntilChanged()
             .onEach { settings ->
-                player?.skipSilenceEnabled = settings.skipSilence
-                player?.setHandleAudioBecomingNoisy(settings.pauseOnDisconnect)
+                playbackSettings = settings
+                if (settings.highResOutput != highResOutput) rebuildPlayer(settings.highResOutput)
+                player?.let { applyPlaybackSettings(it, settings) }
                 fadingPlayer?.fadeEnabled = settings.fadeOnPlayPause
             }
+            .launchIn(serviceScope)
+    }
+
+    /** Sends the music to the output picked in the player, or back to the system's choice. */
+    private fun observeAudioOutput() {
+        audioOutputController.preferredDevice
+            .onEach { device -> player?.setPreferredAudioDevice(device) }
             .launchIn(serviceScope)
     }
 
@@ -232,11 +314,12 @@ class MusicService : MediaSessionService() {
         }
     }
 
-    /** The three player settings watched as one value, so an unrelated change is not reapplied. */
+    /** The player settings watched as one value, so an unrelated change is not reapplied. */
     private data class PlaybackSettings(
         val skipSilence: Boolean,
         val pauseOnDisconnect: Boolean,
         val fadeOnPlayPause: Boolean,
+        val highResOutput: Boolean,
     )
 
     private inner class PlayerListener : Player.Listener {
@@ -250,6 +333,11 @@ class MusicService : MediaSessionService() {
             if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
                 sleepTimerController.onTrackFinished()
             }
+        }
+
+        /** The equalizer is tied to an audio session, and ExoPlayer may hand out a new one. */
+        override fun onAudioSessionIdChanged(audioSessionId: Int) {
+            equalizerController.attach(audioSessionId)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -348,6 +436,9 @@ class MusicService : MediaSessionService() {
         private const val TICK_MS = 1_000L
         private const val SESSION_SAVE_INTERVAL_MS = 15_000L
         private const val MAX_CONSECUTIVE_ERRORS = 5
+
+        /** Matches the setting's default, so most launches never need to rebuild the player. */
+        private const val DEFAULT_HIGH_RES_OUTPUT = true
 
         const val NOTIFICATION_ID = 1001
         const val NOTIFICATION_CHANNEL_ID = "moto_music_playback"

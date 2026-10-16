@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.motomusic.app.core.pluralise
 import com.motomusic.app.domain.model.ScanState
 import com.motomusic.app.domain.model.ThemeMode
+import com.motomusic.app.playback.EqualizerPreset
 import com.motomusic.app.ui.theme.supportsDynamicColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +57,8 @@ fun SettingsScreen(
     onPauseOnHeadphonesChange: (Boolean) -> Unit,
     onFadeOnPlayPauseChange: (Boolean) -> Unit,
     onHideVoiceRecordingsChange: (Boolean) -> Unit,
+    onHighResOutputChange: (Boolean) -> Unit,
+    onOpenEqualizer: () -> Unit,
     onUnhideSong: (String) -> Unit,
     onUnhideAllSongs: () -> Unit,
     onRescan: () -> Unit,
@@ -128,6 +131,28 @@ fun SettingsScreen(
                 subtitle = "Ease the volume up on play and down on pause",
                 checked = preferences.fadeOnPlayPause,
                 onCheckedChange = onFadeOnPlayPauseChange,
+            )
+
+            HorizontalDivider()
+            SettingsSection("Sound")
+            SettingsRow(
+                title = "Equalizer",
+                subtitle = if (preferences.equalizer.enabled) {
+                    EqualizerPreset.fromKey(preferences.equalizer.presetKey).label
+                } else {
+                    "Off"
+                },
+                onClick = onOpenEqualizer,
+            )
+            SettingsToggle(
+                title = "Hi-res output",
+                subtitle = if (preferences.highResOutput && preferences.skipSilence) {
+                    "Paused while Skip silence is on, which needs 16-bit audio"
+                } else {
+                    "Play FLAC, WAV and 24-bit files at full resolution"
+                },
+                checked = preferences.highResOutput,
+                onCheckedChange = onHighResOutputChange,
             )
 
             HorizontalDivider()

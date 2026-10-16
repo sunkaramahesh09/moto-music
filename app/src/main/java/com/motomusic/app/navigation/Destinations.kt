@@ -35,8 +35,6 @@ object Routes {
     const val RECENTLY_ADDED = "collection/recently_added"
 
     const val SEARCH = "search"
-    const val PLAYER = "player"
-    const val QUEUE = "queue"
     const val SETTINGS = "settings"
     const val ABOUT = "about"
 
