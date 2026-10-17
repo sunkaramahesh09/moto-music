@@ -271,7 +271,12 @@ Android version cannot be acted on, and this app has run on exactly one device.
 Turning "applies to administrators" on would mean every runbook edit needs a pull request. That
 is a fine choice later; it is not the right one for a solo maintainer today.
 
-**v0.1.0 is released** — https://github.com/sunkaramahesh09/moto-music/releases/tag/v0.1.0,
+**v0.2.0 is released** — https://github.com/sunkaramahesh09/moto-music/releases/tag/v0.2.0,
+cut 2026-10-17 with `moto-music-0.2.0.apk` (versionCode 2,
+`sha256 2f03d90dc53ae26a69f28b56fb7ee2fd6adfa3da9c265361da72add712147daa`), signed with the key
+in 2d. `keystore.properties` is not in the repo or the ZIP; recreate it from the table in 2d.
+
+**v0.1.0 was released** — https://github.com/sunkaramahesh09/moto-music/releases/tag/v0.1.0,
 cut 2026-09-02 with `moto-music-0.1.0.apk`
 (`sha256 5f36066ef3020be60d2ebb7ed754b88097c5a45a57211753b082cf807e7de617`). Still never cut one
 from a `-debugsigned` APK. See section 2d for the signing key.
@@ -497,6 +502,13 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 ---
 
 ## 7. Session log
+
+**2026-10-17 (session 5)** — shipped v0.2.0: swipe-down player overlay, previous button on the
+mini player, Material transitions, output picker, equalizer, float (hi-res) output with a lossless
+badge, and `appCategory="audio"`. The features were tested on the phone as a debug build. The R8
+release APK was **not** run on a device before publishing because no phone was connected, so
+check it the next time one is. CI's `setup-android` step now asks only for `platform-tools`
+because the `tools` package was retired.
 
 **2026-09-02 (session 4e)** — shipped v0.1.0. Generated the release keystore with a random
 32-character password (section 2d), built `assembleRelease`, and confirmed the APK carried the new
