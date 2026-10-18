@@ -7,7 +7,7 @@ Many Android phones ship without a music player, and the free ones people instal
 for with advertising. This is the alternative: a small, ad-free player that cannot phone home,
 which you can verify yourself in one line of the manifest.
 
-> **Status: 0.2.0, early.** It has been built and walked end to end on one phone (moto g54 5G,
+> **Status: 0.2.1, early.** It has been built and walked end to end on one phone (moto g54 5G,
 > Android 15). Lock-screen and Bluetooth transport controls, headphone-disconnect pause and the
 > sleep timer actually firing have not been verified yet, and there are no UI tests. Treat it as
 > a working preview, not a finished product.
@@ -26,7 +26,7 @@ anything was found in it.
 Check you got the file that was published, rather than trusting the download:
 
 ```bash
-sha256sum moto-music-0.2.0.apk   # compare with the checksum in the release notes
+sha256sum moto-music-0.2.1.apk   # compare with the checksum in the release notes
 ```
 
 The debug build from CI is *not* a substitute for a release: it is unoptimised, and it installs

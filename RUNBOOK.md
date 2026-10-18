@@ -271,7 +271,10 @@ Android version cannot be acted on, and this app has run on exactly one device.
 Turning "applies to administrators" on would mean every runbook edit needs a pull request. That
 is a fine choice later; it is not the right one for a solo maintainer today.
 
-**v0.2.0 is released** — https://github.com/sunkaramahesh09/moto-music/releases/tag/v0.2.0,
+**v0.2.1 is released** — https://github.com/sunkaramahesh09/moto-music/releases/tag/v0.2.1,
+cut 2026-10-18 (versionCode 3), the queue fix in session 6.
+
+**v0.2.0 was released** — https://github.com/sunkaramahesh09/moto-music/releases/tag/v0.2.0,
 cut 2026-10-17 with `moto-music-0.2.0.apk` (versionCode 2,
 `sha256 2f03d90dc53ae26a69f28b56fb7ee2fd6adfa3da9c265361da72add712147daa`), signed with the key
 in 2d. `keystore.properties` is not in the repo or the ZIP; recreate it from the table in 2d.
@@ -502,6 +505,16 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 ---
 
 ## 7. Session log
+
+**2026-10-18 (session 6)** — shipped v0.2.1. The user reported that "Play next" and "Add to queue"
+did not work. Cause: with shuffle on, Media3's `DefaultShuffleOrder` put inserted songs at random
+places in the shuffled sequence, while the queue screen listed playlist order, so a song queued as
+"next" appeared to be next but played somewhere else. Neither action gave any feedback either.
+Fix: `QueueShuffleOrder` (inserted songs follow their playlist predecessor in the shuffled
+sequence; `addToQueue` inserts after the last shuffled song), the queue screen shows the order of
+play (`PlaybackConnection.queueOrder` maps rows to playlist indices), a snackbar confirms each
+action, and either action starts playback when the queue is empty. Tests 55 → 61. **Not run on a
+device**: no phone was connected, and the user asked to release anyway.
 
 **2026-10-17 (session 5)** — shipped v0.2.0: swipe-down player overlay, previous button on the
 mini player, Material transitions, output picker, equalizer, float (hi-res) output with a lossless

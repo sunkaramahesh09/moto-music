@@ -53,6 +53,8 @@ class PlaybackConnection @Inject constructor(
 
     /** Rebuilt only when the timeline changes; mapping a long queue on every event is not free. */
     private var cachedQueue: List<TrackInfo> = emptyList()
+    /** The playlist index behind each row of [cachedQueue]. */
+    private var queueOrder: List<Int> = emptyList()
     private var positionJob: Job? = null
     private var connecting = false
 
@@ -85,6 +87,7 @@ class PlaybackConnection @Inject constructor(
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         cachedQueue = emptyList()
+        queueOrder = emptyList()
         _state.value = PlaybackUiState()
     }
 
@@ -158,21 +161,45 @@ class PlaybackConnection @Inject constructor(
         player.repeatMode = RepeatMode.fromPlayer(player.repeatMode).next().playerValue
     }
 
+    /**
+     * Queues [songs] after everything else. With shuffle on, "everything else" is the shuffled
+     * sequence, so they go in after its last song; [QueueShuffleOrder] keeps them there.
+     * With nothing loaded there is no queue to join, so they simply start playing.
+     */
     fun addToQueue(songs: List<Song>) {
         if (songs.isEmpty()) return
-        withController { it.addMediaItems(MediaItemMapper.toMediaItems(songs)) }
+        withController { player ->
+            if (player.mediaItemCount == 0) return@withController startPlaying(player, songs)
+            val insertAt = if (player.shuffleModeEnabled) {
+                player.currentTimeline.getLastWindowIndex(true) + 1
+            } else {
+                player.mediaItemCount
+            }
+            player.addMediaItems(insertAt, MediaItemMapper.toMediaItems(songs))
+        }
     }
 
-    /** Inserts right after the current track. */
+    /** Inserts right after the current track, which [QueueShuffleOrder] honours in shuffle too. */
     fun playNext(songs: List<Song>) {
         if (songs.isEmpty()) return
         withController { player ->
+            if (player.mediaItemCount == 0) return@withController startPlaying(player, songs)
             val insertAt = (player.currentMediaItemIndex + 1).coerceAtMost(player.mediaItemCount)
             player.addMediaItems(insertAt, MediaItemMapper.toMediaItems(songs))
         }
     }
 
-    fun removeFromQueue(index: Int) = withController { player ->
+    private fun startPlaying(player: MediaController, songs: List<Song>) {
+        player.setMediaItems(MediaItemMapper.toMediaItems(songs))
+        player.prepare()
+        player.play()
+    }
+
+    // Queue positions below are positions in the list the queue screen shows, which is the
+    // order songs will play in; [queueOrder] translates them to the player's playlist indices.
+
+    fun removeFromQueue(position: Int) = withController { player ->
+        val index = queueOrder.getOrNull(position) ?: return@withController
         if (index in 0 until player.mediaItemCount) player.removeMediaItem(index)
     }
 
@@ -189,13 +216,44 @@ class PlaybackConnection @Inject constructor(
     }
 
     fun moveQueueItem(from: Int, to: Int) = withController { player ->
+        val order = queueOrder
         val count = player.mediaItemCount
-        if (from in 0 until count && to in 0 until count && from != to) {
-            player.moveMediaItem(from, to)
+        if (from !in order.indices || to !in order.indices || from == to || order.size != count) {
+            return@withController
         }
+        if (!player.shuffleModeEnabled) {
+            player.moveMediaItem(from, to)
+            return@withController
+        }
+        moveInShuffledQueue(player, order, from, to)
     }
 
-    fun skipToQueueIndex(index: Int) = withController { player ->
+    /**
+     * The player cannot reorder a shuffled sequence directly, so the song is taken out and put
+     * back in after the song it should follow, which [QueueShuffleOrder] turns into that exact
+     * spot. Taking out the song that is playing would interrupt it, so when it is the one being
+     * moved by a single step, its neighbour moves the other way instead — the same swap.
+     */
+    private fun moveInShuffledQueue(player: MediaController, order: List<Int>, from: Int, to: Int) {
+        val current = player.currentMediaItemIndex
+        var source = from
+        var target = to
+        if (order[source] == current) {
+            if (kotlin.math.abs(from - to) != 1) return
+            source = to
+            target = from
+        }
+        val index = order[source]
+        val remaining = order.filterIndexed { position, _ -> position != source }
+        // Playlist indices above the removed song shift down once it is gone.
+        val anchor = remaining.getOrNull(target - 1)?.let { if (it > index) it - 1 else it }
+        val item = player.getMediaItemAt(index)
+        player.removeMediaItem(index)
+        player.addMediaItem(if (anchor == null) 0 else anchor + 1, item)
+    }
+
+    fun skipToQueueIndex(position: Int) = withController { player ->
+        val index = queueOrder.getOrNull(position) ?: return@withController
         if (index in 0 until player.mediaItemCount) {
             player.seekTo(index, 0L)
             player.play()
@@ -259,7 +317,8 @@ class PlaybackConnection @Inject constructor(
             return
         }
         val queue = if (rebuildQueue || cachedQueue.size != active.mediaItemCount) {
-            (0 until active.mediaItemCount)
+            queueOrder = playOrder(active)
+            queueOrder
                 .map { MediaItemMapper.toTrackInfo(active.getMediaItemAt(it)) }
                 .also { cachedQueue = it }
         } else {
@@ -273,10 +332,29 @@ class PlaybackConnection @Inject constructor(
             shuffleEnabled = active.shuffleModeEnabled,
             repeatMode = RepeatMode.fromPlayer(active.repeatMode),
             queue = queue,
-            queueIndex = active.currentMediaItemIndex.coerceAtLeast(0),
+            queueIndex = queueOrder.indexOf(active.currentMediaItemIndex).coerceAtLeast(0),
             hasNext = active.hasNextMediaItem(),
             hasPrevious = active.hasPreviousMediaItem(),
         )
+    }
+
+    /**
+     * Playlist indices in the order they will play. With shuffle off that is the playlist
+     * itself; with it on, the shuffled sequence, which is what a queue screen has to show for
+     * "Play next" to visibly mean next.
+     */
+    private fun playOrder(player: Player): List<Int> {
+        val timeline = player.currentTimeline
+        if (!player.shuffleModeEnabled || timeline.windowCount != player.mediaItemCount) {
+            return List(player.mediaItemCount) { it }
+        }
+        val order = ArrayList<Int>(timeline.windowCount)
+        var index = timeline.getFirstWindowIndex(true)
+        while (index != C.INDEX_UNSET && order.size < timeline.windowCount) {
+            order += index
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, true)
+        }
+        return if (order.size == player.mediaItemCount) order else List(player.mediaItemCount) { it }
     }
 
     private inner class ControllerListener : Player.Listener {
@@ -288,7 +366,12 @@ class PlaybackConnection @Inject constructor(
          */
         override fun onEvents(player: Player, events: Player.Events) {
             if (!events.containsAny(*STATE_EVENTS)) return
-            pushState(rebuildQueue = events.contains(Player.EVENT_TIMELINE_CHANGED))
+            pushState(
+                rebuildQueue = events.containsAny(
+                    Player.EVENT_TIMELINE_CHANGED,
+                    Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED,
+                ),
+            )
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {

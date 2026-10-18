@@ -90,9 +90,22 @@ class PlayerViewModel @Inject constructor(
 
     override fun shuffle(songs: List<Song>) = playbackConnection.shuffleSongs(songs)
 
-    override fun playNext(song: Song) = playbackConnection.playNext(listOf(song))
+    override fun playNext(song: Song) {
+        val startsPlayback = !playback.value.hasSession
+        playbackConnection.playNext(listOf(song))
+        if (!startsPlayback) eventBus.post("\"${song.title}\" will play next")
+    }
 
-    override fun addToQueue(songs: List<Song>) = playbackConnection.addToQueue(songs)
+    override fun addToQueue(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        val startsPlayback = !playback.value.hasSession
+        playbackConnection.addToQueue(songs)
+        if (startsPlayback) return
+        eventBus.post(
+            if (songs.size == 1) "Added \"${songs.single().title}\" to the queue"
+            else "Added ${songs.size} songs to the queue"
+        )
+    }
 
     override fun toggleFavorite(song: Song) {
         viewModelScope.launch { favoritesRepository.toggleFavorite(song.id) }

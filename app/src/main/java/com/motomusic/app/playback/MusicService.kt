@@ -181,7 +181,10 @@ class MusicService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
-            .also { it.addListener(playerListener) }
+            .also {
+                it.setShuffleOrder(QueueShuffleOrder())
+                it.addListener(playerListener)
+            }
     }
 
     /**
@@ -206,6 +209,8 @@ class MusicService : MediaSessionService() {
             setPreferredAudioDevice(audioOutputController.preferredDevice.value)
             if (items.isNotEmpty()) {
                 setMediaItems(items, index.coerceIn(0, items.lastIndex), positionMs.coerceAtLeast(0L))
+                // Keep the shuffled sequence too, or toggling the setting would reshuffle the queue.
+                setShuffleOrder(old.shuffleOrder)
                 prepare()
             }
         }
