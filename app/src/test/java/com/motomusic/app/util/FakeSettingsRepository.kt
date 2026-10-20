@@ -22,6 +22,11 @@ class FakeSettingsRepository(
     override suspend fun setThemeMode(mode: ThemeMode) = update { copy(themeMode = mode) }
 
     override suspend fun setDynamicColor(enabled: Boolean) = update { copy(useDynamicColor = enabled) }
+    override suspend fun addRecentSearch(query: String) = update {
+        copy(recentSearches = (listOf(query) + recentSearches.filterNot { it.equals(query, true) }).take(8))
+    }
+    override suspend fun removeRecentSearch(query: String) = update { copy(recentSearches = recentSearches - query) }
+    override suspend fun clearRecentSearches() = update { copy(recentSearches = emptyList()) }
 
     override suspend fun setSongSortOrder(order: SortOrder) = update { copy(songSortOrder = order) }
 

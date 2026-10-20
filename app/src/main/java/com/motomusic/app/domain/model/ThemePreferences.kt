@@ -14,7 +14,9 @@ enum class ThemeMode(val storageKey: String, val label: String) {
 /** Everything the Settings screen can change. Persisted locally with DataStore. */
 data class UserPreferences(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val useDynamicColor: Boolean = true,
+    val useDynamicColor: Boolean = false,
+    /** What the user searched for lately, newest first. Stays on the device like everything else. */
+    val recentSearches: List<String> = emptyList(),
     val songSortOrder: SortOrder = SortOrder.TITLE_ASC,
     val resumeLastSession: Boolean = true,
     val skipSilence: Boolean = false,

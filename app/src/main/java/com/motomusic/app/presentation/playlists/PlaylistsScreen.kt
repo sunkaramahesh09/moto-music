@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,7 @@ import com.motomusic.app.ui.components.PlaylistRow
 fun PlaylistsScreen(
     state: PlaylistsUiState,
     contentPadding: PaddingValues,
+    onBack: () -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
     onCreate: (String) -> Unit,
     onRename: (Long, String) -> Unit,
@@ -46,7 +48,16 @@ fun PlaylistsScreen(
 
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Playlists") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Playlists") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { createOpen = true },

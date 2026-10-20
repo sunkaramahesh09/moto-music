@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ import com.motomusic.app.ui.components.SongList
 fun SongsScreen(
     state: SongsUiState,
     contentPadding: PaddingValues,
+    onBack: () -> Unit,
     onQueryChange: (String) -> Unit,
     onClearQuery: () -> Unit,
     onSortOrderChange: (SortOrder) -> Unit,
@@ -62,6 +64,11 @@ fun SongsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Songs") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                    }
+                },
                 actions = {
                     IconButton(onClick = {
                         searchVisible = !searchVisible

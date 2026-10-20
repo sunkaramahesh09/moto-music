@@ -97,12 +97,17 @@ data class TrackInfo(
      * ones. ALAC usually hides inside an `.m4a` reported as plain `audio/mp4`, so it is only
      * recognised when the platform says so outright.
      */
-    val losslessFormat: String?
-        get() = when (mimeType.lowercase()) {
-            "audio/flac", "audio/x-flac" -> "FLAC"
-            "audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave" -> "WAV"
-            "audio/alac", "audio/x-alac" -> "ALAC"
-            "audio/aiff", "audio/x-aiff" -> "AIFF"
-            else -> null
-        }
+    val losslessFormat: String? get() = losslessFormatFor(mimeType)
 }
+
+/** "FLAC", "WAV", "ALAC" or "AIFF" for a lossless MIME type, otherwise null. */
+fun losslessFormatFor(mimeType: String): String? = when (mimeType.lowercase()) {
+    "audio/flac", "audio/x-flac" -> "FLAC"
+    "audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave" -> "WAV"
+    "audio/alac", "audio/x-alac" -> "ALAC"
+    "audio/aiff", "audio/x-aiff" -> "AIFF"
+    else -> null
+}
+
+/** The lossless container of a library song, if it has one. */
+val Song.losslessFormat: String? get() = losslessFormatFor(mimeType)

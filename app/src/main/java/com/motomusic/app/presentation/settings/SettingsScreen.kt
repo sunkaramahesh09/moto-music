@@ -100,7 +100,7 @@ fun SettingsScreen(
             if (supportsDynamicColor) {
                 SettingsToggle(
                     title = "Colours from wallpaper",
-                    subtitle = "Match Material You colours on this device",
+                    subtitle = "Use your wallpaper's colours instead of Action Blue",
                     checked = preferences.useDynamicColor,
                     onCheckedChange = onDynamicColorChange,
                 )

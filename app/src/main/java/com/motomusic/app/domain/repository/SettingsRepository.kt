@@ -10,6 +10,9 @@ interface SettingsRepository {
 
     suspend fun setThemeMode(mode: ThemeMode)
     suspend fun setDynamicColor(enabled: Boolean)
+    suspend fun addRecentSearch(query: String)
+    suspend fun removeRecentSearch(query: String)
+    suspend fun clearRecentSearches()
     suspend fun setSongSortOrder(order: SortOrder)
     suspend fun setResumeLastSession(enabled: Boolean)
     suspend fun setSkipSilence(enabled: Boolean)

@@ -45,7 +45,8 @@ class SettingsRepositoryImpl @Inject constructor(
         .map { prefs ->
             UserPreferences(
                 themeMode = ThemeMode.fromStorageKey(prefs[KEY_THEME]),
-                useDynamicColor = prefs[KEY_DYNAMIC_COLOR] ?: true,
+                useDynamicColor = prefs[KEY_DYNAMIC_COLOR] ?: false,
+                recentSearches = decodeRecentSearches(prefs[KEY_RECENT_SEARCHES]),
                 songSortOrder = SortOrder.fromStorageKey(prefs[KEY_SORT_ORDER]),
                 resumeLastSession = prefs[KEY_RESUME_SESSION] ?: true,
                 skipSilence = prefs[KEY_SKIP_SILENCE] ?: false,
@@ -69,6 +70,26 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setThemeMode(mode: ThemeMode) = edit { it[KEY_THEME] = mode.storageKey }
 
     override suspend fun setDynamicColor(enabled: Boolean) = edit { it[KEY_DYNAMIC_COLOR] = enabled }
+
+    override suspend fun addRecentSearch(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return
+        edit { prefs ->
+            val updated = listOf(trimmed) + decodeRecentSearches(prefs[KEY_RECENT_SEARCHES])
+                .filterNot { it.equals(trimmed, ignoreCase = true) }
+            prefs[KEY_RECENT_SEARCHES] = updated.take(MAX_RECENT_SEARCHES).joinToString(RECENT_SEPARATOR)
+        }
+    }
+
+    override suspend fun removeRecentSearch(query: String) = edit { prefs ->
+        val updated = decodeRecentSearches(prefs[KEY_RECENT_SEARCHES]).filterNot { it == query }
+        prefs[KEY_RECENT_SEARCHES] = updated.joinToString(RECENT_SEPARATOR)
+    }
+
+    override suspend fun clearRecentSearches() = edit { it.remove(KEY_RECENT_SEARCHES) }
+
+    private fun decodeRecentSearches(raw: String?): List<String> =
+        raw?.split(RECENT_SEPARATOR)?.filter { it.isNotBlank() }.orEmpty()
 
     override suspend fun setSongSortOrder(order: SortOrder) = edit { it[KEY_SORT_ORDER] = order.storageKey }
 
@@ -139,9 +160,14 @@ class SettingsRepositoryImpl @Inject constructor(
     private companion object {
         const val TAG = "SettingsRepository"
         const val MAX_PERSISTED_QUEUE = 500
+        const val MAX_RECENT_SEARCHES = 8
+
+        /** A control character, so no query a person can type will ever split in two. */
+        const val RECENT_SEPARATOR = "\u001F"
 
         val KEY_THEME = stringPreferencesKey("theme_mode")
         val KEY_DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        val KEY_RECENT_SEARCHES = stringPreferencesKey("recent_searches")
         val KEY_SORT_ORDER = stringPreferencesKey("song_sort_order")
         val KEY_RESUME_SESSION = booleanPreferencesKey("resume_last_session")
         val KEY_SKIP_SILENCE = booleanPreferencesKey("skip_silence")

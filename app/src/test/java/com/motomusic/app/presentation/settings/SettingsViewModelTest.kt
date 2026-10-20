@@ -64,7 +64,7 @@ class SettingsViewModelTest {
     fun `toggles are written straight through to settings`() =
         runTest(mainDispatcherRule.testDispatcher) {
             viewModel.setThemeMode(ThemeMode.DARK)
-            viewModel.setDynamicColor(false)
+            viewModel.setDynamicColor(true)
             viewModel.setResumeLastSession(false)
             viewModel.setSkipSilence(true)
             viewModel.setPauseOnHeadphonesDisconnect(false)
@@ -74,7 +74,7 @@ class SettingsViewModelTest {
 
             val stored = settingsRepository.state.value
             assertEquals(ThemeMode.DARK, stored.themeMode)
-            assertFalse(stored.useDynamicColor)
+            assertTrue(stored.useDynamicColor)
             assertFalse(stored.resumeLastSession)
             assertTrue(stored.skipSilence)
             assertFalse(stored.pauseOnHeadphonesDisconnect)

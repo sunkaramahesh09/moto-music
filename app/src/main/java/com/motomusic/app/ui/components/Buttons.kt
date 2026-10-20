@@ -10,7 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,7 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-private val MinTouchTarget = 48.dp
+/** Primary and secondary actions are 50dp capsules. */
+private val PillHeight = 50.dp
 
 @Composable
 fun PlayButton(
@@ -29,7 +32,7 @@ fun PlayButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.heightIn(min = MinTouchTarget),
+        modifier = modifier.heightIn(min = PillHeight),
     ) {
         Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
@@ -43,10 +46,15 @@ fun ShuffleButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    // The design's secondary action: an accent-tinted pill with accent text.
     FilledTonalButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.heightIn(min = MinTouchTarget),
+        modifier = modifier.heightIn(min = PillHeight),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+            contentColor = MaterialTheme.colorScheme.primary,
+        ),
     ) {
         Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))

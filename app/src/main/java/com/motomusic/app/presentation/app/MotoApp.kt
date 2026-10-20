@@ -15,13 +15,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +53,8 @@ import com.motomusic.app.presentation.queue.QueueScreen
 import com.motomusic.app.presentation.player.SleepTimerSheet
 import com.motomusic.app.presentation.player.SongMenuSheet
 import com.motomusic.app.presentation.playlists.AddToPlaylistSheet
+import com.motomusic.app.ui.components.GlassNavigationBar
+import com.motomusic.app.ui.components.GlassTab
 import com.motomusic.app.ui.components.MiniPlayer
 import com.motomusic.app.ui.theme.MotoMusicTheme
 
@@ -136,6 +134,7 @@ private fun MotoAppContent(
     }
 
     val topLevel = TopLevelDestination.entries.firstOrNull { it.route == currentRoute }
+    val tabs = remember { TopLevelDestination.entries.map { GlassTab(it.label, it.icon) } }
 
     CompositionLocalProvider(
         LocalSongActions provides playerViewModel,
@@ -146,7 +145,8 @@ private fun MotoAppContent(
             Scaffold(
                 snackbarHost = { if (!playerExpanded) SnackbarHost(snackbarHostState) },
                 bottomBar = {
-                    Column {
+                    // Detail screens have no tab bar, so the dock keeps clear of the system bar itself.
+                    Column(if (topLevel == null) Modifier.navigationBarsPadding() else Modifier) {
                         MiniPlayer(
                             track = playback.current,
                             isPlaying = playback.isPlaying,
@@ -163,18 +163,13 @@ private fun MotoAppContent(
                             enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
                             exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
                         ) {
-                            NavigationBar {
-                                TopLevelDestination.entries.forEach { destination ->
-                                    NavigationBarItem(
-                                        selected = destination == topLevel,
-                                        onClick = { navController.navigateToTopLevel(destination.route) },
-                                        icon = {
-                                            Icon(destination.icon, contentDescription = destination.label)
-                                        },
-                                        label = { Text(destination.label) },
-                                    )
-                                }
-                            }
+                            GlassNavigationBar(
+                                tabs = tabs,
+                                selectedIndex = TopLevelDestination.entries.indexOf(topLevel),
+                                onSelect = { index ->
+                                    navController.navigateToTopLevel(TopLevelDestination.entries[index].route)
+                                },
+                            )
                         }
                     }
                 },
@@ -185,6 +180,7 @@ private fun MotoAppContent(
                     playerViewModel = playerViewModel,
                     onRescan = mainViewModel::refreshLibrary,
                     onOpenEqualizer = audioViewModel::openEqualizer,
+                    onOpenOutputs = audioViewModel::openOutputs,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -236,6 +232,9 @@ private fun MotoAppContent(
                             onOpenQueue = { queueOpen = true },
                             onOpenSleepTimer = playerViewModel::openSleepTimer,
                             onOpenMenu = { playerViewModel.openMenuForCurrentSong() },
+                            onOpenAlbum = {
+                                playback.current?.let { navigateFromPlayer(Routes.albumDetails(it.albumId)) }
+                            },
                             output = outputs.active,
                             outputPinned = outputs.selectedId != null,
                             equalizerOn = equalizer.enabled,

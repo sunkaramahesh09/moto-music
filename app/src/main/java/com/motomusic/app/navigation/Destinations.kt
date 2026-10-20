@@ -2,16 +2,16 @@ package com.motomusic.app.navigation
 
 import android.net.Uri
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /** Every screen the app can navigate to. */
 object Routes {
+    /** The Library tab. Kept as "home" so saved navigation state from older versions still resolves. */
     const val HOME = "home"
+    const val BROWSE = "browse"
     const val SONGS = "songs"
     const val ALBUMS = "albums"
     const val ARTISTS = "artists"
@@ -57,9 +57,7 @@ enum class TopLevelDestination(
     val label: String,
     val icon: ImageVector,
 ) {
-    HOME(Routes.HOME, "Home", Icons.Rounded.Home),
-    SONGS(Routes.SONGS, "Songs", Icons.Rounded.MusicNote),
-    ALBUMS(Routes.ALBUMS, "Albums", Icons.Rounded.Album),
-    ARTISTS(Routes.ARTISTS, "Artists", Icons.Rounded.Person),
-    PLAYLISTS(Routes.PLAYLISTS, "Playlists", Icons.Rounded.LibraryMusic),
+    LIBRARY(Routes.HOME, "Library", Icons.Rounded.LibraryMusic),
+    SEARCH(Routes.SEARCH, "Search", Icons.Rounded.Search),
+    BROWSE(Routes.BROWSE, "Browse", Icons.Rounded.Explore),
 }

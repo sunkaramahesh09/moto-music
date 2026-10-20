@@ -506,6 +506,19 @@ Tests live in `app/src/test/java/com/motomusic/app/` (`core/`, `data/mediastore/
 
 ## 7. Session log
 
+**2026-10-20 (session 7)** — shipped v0.3.0, the "Sonic Glass" redesign from the user's Stitch
+mock-ups. Three tabs (Library, Search, Browse) under a bottom tab bar; a floating mini-player dock;
+a rebuilt Now Playing (hero artwork with a blurred glow on API 31+, slim scrubber, system volume
+slider, EQ / output / queue capsules); Action Blue as the default palette, with wallpaper colours
+now opt-in; the Inter variable font (OFL, licence in `assets/licenses`). Streaming parts of the
+mock-ups were mapped to the local library: charts became "Your top songs", moods became quick
+mixes, genres became library categories, Cast became the output picker. Recent searches are kept
+in DataStore. Checked on the phone in dark and light mode; that pass found and fixed black text on
+Now Playing (the screen paints its own background, so it must provide `LocalContentColor`), the
+cover glow clipped to a square (a separate alpha `graphicsLayer` bounds the blur — keep alpha and
+`renderEffect` in one layer), and list text reading through the chrome — without a real backdrop
+blur any translucency looks dirty, so `GLASS_ALPHA` is 1. Tests stay at 61, lint 0.
+
 **2026-10-18 (session 6)** — shipped v0.2.1. The user reported that "Play next" and "Add to queue"
 did not work. Cause: with shuffle on, Media3's `DefaultShuffleOrder` put inserted songs at random
 places in the shuffled sequence, while the queue screen listed playlist order, so a song queued as

@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +29,7 @@ import com.motomusic.app.domain.model.Song
 import com.motomusic.app.presentation.common.LocalFavoriteIds
 import com.motomusic.app.presentation.common.LocalNowPlayingId
 import com.motomusic.app.presentation.common.LocalSongActions
+import com.motomusic.app.ui.theme.TabularFigures
 
 /**
  * One song in a list.
@@ -43,6 +44,7 @@ fun SongRow(
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
     trailingText: String? = null,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     val actions = LocalSongActions.current
     val isPlaying = LocalNowPlayingId.current == song.id
@@ -53,28 +55,40 @@ fun SongRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = 60.dp)
             .clickable(onClick = onClick)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leading != null) {
+            leading()
+            Spacer(Modifier.width(12.dp))
+        }
         if (showArtwork) {
             ArtworkImage(
                 albumId = song.albumId,
                 songUri = song.uri,
-                size = 52.dp,
-                cornerRadius = 10.dp,
+                size = 44.dp,
+                cornerRadius = 12.dp,
             )
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(12.dp))
         }
 
         Column(Modifier.weight(1f)) {
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = titleColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = titleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (isPlaying) {
+                    Spacer(Modifier.width(6.dp))
+                    NowBadge()
+                }
+            }
             Spacer(Modifier.height(2.dp))
             Text(
                 text = songSubtitle(song),
@@ -87,26 +101,23 @@ fun SongRow(
 
         Spacer(Modifier.width(8.dp))
 
-        if (isFavorite) {
-            Icon(
-                imageVector = Icons.Rounded.Favorite,
-                contentDescription = "Favourite",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-        }
-
         Text(
             text = trailingText ?: formatDuration(song.durationMs),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.merge(TabularFigures),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        IconButton(onClick = { actions.openMenu(song) }) {
+        HeartButton(
+            isFavorite = isFavorite,
+            onClick = { actions.toggleFavorite(song) },
+            title = song.title,
+        )
+
+        IconButton(onClick = { actions.openMenu(song) }, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = Icons.Rounded.MoreVert,
                 contentDescription = "More options for ${song.title}",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

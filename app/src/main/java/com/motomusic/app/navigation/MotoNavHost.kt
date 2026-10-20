@@ -12,6 +12,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,6 +32,8 @@ import com.motomusic.app.presentation.artists.ArtistDetailsScreen
 import com.motomusic.app.presentation.artists.ArtistDetailsViewModel
 import com.motomusic.app.presentation.artists.ArtistsScreen
 import com.motomusic.app.presentation.artists.ArtistsViewModel
+import com.motomusic.app.presentation.browse.BrowseScreen
+import com.motomusic.app.presentation.browse.BrowseViewModel
 import com.motomusic.app.presentation.collection.SongCollectionScreen
 import com.motomusic.app.presentation.collection.SongCollectionViewModel
 import com.motomusic.app.presentation.folders.FolderDetailsScreen
@@ -63,8 +68,12 @@ fun MotoNavHost(
     playerViewModel: PlayerViewModel,
     onRescan: () -> Unit,
     onOpenEqualizer: () -> Unit,
+    onOpenOutputs: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Bumped when the Library's search bar sends the user to the Search tab to type.
+    var searchFocusRequest by remember { mutableIntStateOf(0) }
+
     NavHost(
         navController = navController,
         startDestination = Routes.HOME,
@@ -82,13 +91,38 @@ fun MotoNavHost(
             HomeScreen(
                 state = state,
                 contentPadding = contentPadding,
-                onOpenSearch = { navController.navigateTo(Routes.SEARCH) },
+                onOpenSearch = {
+                    searchFocusRequest++
+                    navController.navigateToTopLevel(Routes.SEARCH)
+                },
                 onOpenSettings = { navController.navigateTo(Routes.SETTINGS) },
+                onOpenOutputs = onOpenOutputs,
                 onOpenSongs = { navController.navigateTo(Routes.SONGS) },
+                onOpenAlbums = { navController.navigateTo(Routes.ALBUMS) },
+                onOpenArtists = { navController.navigateTo(Routes.ARTISTS) },
+                onOpenPlaylists = { navController.navigateTo(Routes.PLAYLISTS) },
+                onOpenFolders = { navController.navigateTo(Routes.FOLDERS) },
                 onOpenFavorites = { navController.navigateTo(Routes.FAVORITES) },
                 onOpenRecentlyAdded = { navController.navigateTo(Routes.RECENTLY_ADDED) },
                 onOpenMostPlayed = { navController.navigateTo(Routes.MOST_PLAYED) },
-                onOpenFolders = { navController.navigateTo(Routes.FOLDERS) },
+                onRescan = onRescan,
+            )
+        }
+
+        composable(Routes.BROWSE) {
+            val viewModel: BrowseViewModel = hiltViewModel()
+            val state by viewModel.state.collectAsStateWithLifecycle()
+            BrowseScreen(
+                state = state,
+                contentPadding = contentPadding,
+                onShuffleEverything = { viewModel.shuffleEverything() },
+                onPlayMix = { viewModel.playMix(it) },
+                onAlbumClick = { navController.navigateTo(Routes.albumDetails(it.id)) },
+                onOpenAlbums = { navController.navigateTo(Routes.ALBUMS) },
+                onOpenMostPlayed = { navController.navigateTo(Routes.MOST_PLAYED) },
+                onOpenEqualizer = onOpenEqualizer,
+                onOpenOutputs = onOpenOutputs,
+                onOpenSettings = { navController.navigateTo(Routes.SETTINGS) },
                 onRescan = onRescan,
             )
         }
@@ -99,6 +133,7 @@ fun MotoNavHost(
             SongsScreen(
                 state = state,
                 contentPadding = contentPadding,
+                onBack = navController::popBackStack,
                 onQueryChange = viewModel::onQueryChange,
                 onClearQuery = viewModel::clearQuery,
                 onSortOrderChange = viewModel::setSortOrder,
@@ -112,6 +147,7 @@ fun MotoNavHost(
             AlbumsScreen(
                 state = state,
                 contentPadding = contentPadding,
+                onBack = navController::popBackStack,
                 onAlbumClick = { navController.navigateTo(Routes.albumDetails(it.id)) },
             )
         }
@@ -122,6 +158,7 @@ fun MotoNavHost(
             ArtistsScreen(
                 state = state,
                 contentPadding = contentPadding,
+                onBack = navController::popBackStack,
                 onArtistClick = { navController.navigateTo(Routes.artistDetails(it.id)) },
             )
         }
@@ -132,6 +169,7 @@ fun MotoNavHost(
             PlaylistsScreen(
                 state = state,
                 contentPadding = contentPadding,
+                onBack = navController::popBackStack,
                 onPlaylistClick = { navController.navigateTo(Routes.playlistDetails(it.id)) },
                 onCreate = viewModel::createPlaylist,
                 onRename = viewModel::renamePlaylist,
@@ -227,9 +265,17 @@ fun MotoNavHost(
             SearchScreen(
                 state = state,
                 contentPadding = contentPadding,
+                focusRequest = searchFocusRequest,
+                onFocusHandled = { searchFocusRequest = 0 },
                 onQueryChange = viewModel::onQueryChange,
                 onClearQuery = viewModel::clearQuery,
-                onBack = navController::popBackStack,
+                onRememberQuery = viewModel::rememberQuery,
+                onRemoveRecent = viewModel::removeRecentSearch,
+                onClearRecents = viewModel::clearRecentSearches,
+                onOpenAlbums = { navController.navigateTo(Routes.ALBUMS) },
+                onOpenArtists = { navController.navigateTo(Routes.ARTISTS) },
+                onOpenPlaylists = { navController.navigateTo(Routes.PLAYLISTS) },
+                onOpenFolders = { navController.navigateTo(Routes.FOLDERS) },
             )
         }
 

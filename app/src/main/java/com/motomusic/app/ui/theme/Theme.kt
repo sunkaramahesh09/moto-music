@@ -5,6 +5,9 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -44,6 +47,13 @@ private val LightScheme = lightColorScheme(
     inverseSurface = MotoColors.LightInverseSurface,
     inverseOnSurface = MotoColors.LightInverseOnSurface,
     inversePrimary = MotoColors.LightInversePrimary,
+    surfaceContainerLowest = MotoColors.LightSurfaceContainerLowest,
+    surfaceContainerLow = MotoColors.LightSurfaceContainerLow,
+    surfaceContainer = MotoColors.LightSurfaceContainer,
+    surfaceContainerHigh = MotoColors.LightSurfaceContainerHigh,
+    surfaceContainerHighest = MotoColors.LightSurfaceContainerHighest,
+    surfaceBright = MotoColors.LightSurfaceContainerHighest,
+    surfaceDim = MotoColors.LightBackground,
 )
 
 private val DarkScheme = darkColorScheme(
@@ -74,6 +84,25 @@ private val DarkScheme = darkColorScheme(
     inverseSurface = MotoColors.DarkInverseSurface,
     inverseOnSurface = MotoColors.DarkInverseOnSurface,
     inversePrimary = MotoColors.DarkInversePrimary,
+    surfaceContainerLowest = MotoColors.DarkSurfaceContainerLowest,
+    surfaceContainerLow = MotoColors.DarkSurfaceContainerLow,
+    surfaceContainer = MotoColors.DarkSurfaceContainer,
+    surfaceContainerHigh = MotoColors.DarkSurfaceContainerHigh,
+    surfaceContainerHighest = MotoColors.DarkSurfaceContainerHighest,
+    surfaceBright = MotoColors.DarkSurfaceContainerHighest,
+    surfaceDim = MotoColors.DarkBackground,
+)
+
+/**
+ * High-radius, pebble-like corners. Sheets and the hero artwork take the largest; list artwork and
+ * small badges the smallest, so a nested shape always sits concentrically inside its parent.
+ */
+val MotoShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp),
 )
 
 /** True when dynamic colour is available on this device. */
@@ -83,7 +112,7 @@ val supportsDynamicColor: Boolean
 @Composable
 fun MotoMusicTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    useDynamicColor: Boolean = true,
+    useDynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val darkTheme = when (themeMode) {
@@ -118,6 +147,7 @@ fun MotoMusicTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = MotoTypography,
+        shapes = MotoShapes,
         content = content,
     )
 }

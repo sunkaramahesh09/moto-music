@@ -1,6 +1,8 @@
 package com.motomusic.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +25,9 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,55 +43,35 @@ import com.motomusic.app.domain.model.Artist
 import com.motomusic.app.domain.model.Folder
 import com.motomusic.app.domain.model.Playlist
 
-/** Grid tile for an album. Artwork is decoded at the tile size, never full resolution. */
+/**
+ * Grid tile for an album: the cover inset in a softly framed card, its corners concentric with
+ * the frame, then the title and artist. Artwork is decoded at the tile size, never full size.
+ */
 @Composable
 fun AlbumGridItem(
     album: Album,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    badge: String? = null,
 ) {
-    Column(
+    FramedArtworkCard(
+        albumId = album.id,
+        songUri = album.artworkSongUri,
+        title = album.name,
+        subtitle = album.artist,
+        detail = pluralise(album.songCount, "song"),
+        badge = badge,
+        onClick = onClick,
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .semantics {
+            .padding(6.dp)
+            .semantics(mergeDescendants = true) {
                 contentDescription =
                     "${album.name} by ${album.artist}, ${pluralise(album.songCount, "song")}"
-            }
-            .padding(8.dp),
-    ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
-            LargeArtworkImage(
-                albumId = album.id,
-                songUri = album.artworkSongUri,
-                sizeHint = 256.dp,
-                cornerRadius = 12.dp,
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(
-            text = album.name,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = album.artist,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = pluralise(album.songCount, "song"),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-            maxLines = 1,
-        )
-    }
+            },
+    )
 }
 
-/** Horizontal carousel tile used on the home screen. */
+/** Horizontal carousel tile, as in "Recently added". */
 @Composable
 fun ArtworkTile(
     albumId: Long,
@@ -96,28 +80,71 @@ fun ArtworkTile(
     subtitle: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    badge: String? = null,
 ) {
+    FramedArtworkCard(
+        albumId = albumId,
+        songUri = songUri,
+        title = title,
+        subtitle = subtitle,
+        badge = badge,
+        onClick = onClick,
+        modifier = modifier
+            .width(150.dp)
+            .semantics(mergeDescendants = true) { contentDescription = "$title, $subtitle" },
+    )
+}
+
+@Composable
+private fun FramedArtworkCard(
+    albumId: Long,
+    songUri: String?,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    detail: String? = null,
+    badge: String? = null,
+) {
+    val interaction = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
-            .width(148.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = "$title, $subtitle" }
-            .padding(6.dp),
+            .pressScale(interaction)
+            .clip(RoundedCornerShape(FRAME_RADIUS))
+            .clickable(interactionSource = interaction, indication = ripple(), onClick = onClick),
     ) {
-        LargeArtworkImage(
-            albumId = albumId,
-            songUri = songUri,
-            sizeHint = 256.dp,
-            cornerRadius = 12.dp,
-            modifier = Modifier.aspectRatio(1f),
-        )
+        // Inner radius = outer radius − frame padding, so the two curves stay parallel.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(FRAME_RADIUS))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .border(0.5.dp, hairlineColor(), RoundedCornerShape(FRAME_RADIUS))
+                .padding(FRAME_PADDING),
+        ) {
+            LargeArtworkImage(
+                albumId = albumId,
+                songUri = songUri,
+                sizeHint = 256.dp,
+                cornerRadius = FRAME_RADIUS - FRAME_PADDING,
+                modifier = Modifier.aspectRatio(1f),
+            )
+            if (badge != null) {
+                QualityBadge(
+                    text = badge,
+                    onArtwork = true,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+                )
+            }
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp),
         )
         Text(
             text = subtitle,
@@ -125,9 +152,23 @@ fun ArtworkTile(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp),
         )
+        if (detail != null) {
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 2.dp),
+            )
+        }
+        Spacer(Modifier.height(4.dp))
     }
 }
+
+private val FRAME_RADIUS = 22.dp
+private val FRAME_PADDING = 6.dp
 
 @Composable
 fun ArtistRow(
@@ -148,8 +189,8 @@ fun ArtistRow(
         ArtworkImage(
             albumId = artist.artworkAlbumId,
             songUri = artist.artworkSongUri,
-            size = 52.dp,
-            cornerRadius = 26.dp,
+            size = 48.dp,
+            cornerRadius = 24.dp,
         )
     }
 }
@@ -172,7 +213,8 @@ fun PlaylistRow(
             ArtworkImage(
                 albumId = playlist.artworkAlbumId,
                 songUri = playlist.artworkSongUri,
-                size = 52.dp,
+                size = 48.dp,
+                cornerRadius = 12.dp,
             )
         } else {
             RoundIcon(Icons.AutoMirrored.Rounded.QueueMusic)
@@ -201,15 +243,15 @@ fun FolderRow(
 fun RoundIcon(icon: ImageVector, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .size(52.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .size(48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = MaterialTheme.colorScheme.primary,
         )
     }
 }
@@ -247,7 +289,7 @@ private fun LibraryListRow(
     ) {
         Box(Modifier.clearAndSetSemantics {}) { leading() }
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,

@@ -3,6 +3,8 @@ package com.motomusic.app.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
@@ -38,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -93,42 +97,48 @@ fun MiniPlayer(
             backgroundContent = {},
             modifier = Modifier.fillMaxWidth(),
         ) {
+            // A floating glass dock: rounded, translucent, hairline-edged, with the progress
+            // line running along its bottom edge.
+            val shape = RoundedCornerShape(DOCK_RADIUS)
             Surface(
-                tonalElevation = 3.dp,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = GLASS_ALPHA),
+                shape = shape,
+                shadowElevation = 8.dp,
+                border = BorderStroke(0.5.dp, hairlineColor()),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .clip(RoundedCornerShape(16.dp)),
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
             ) {
-                Column {
+                Box {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(64.dp)
                             .clickable(onClick = onExpand)
-                        .draggable(
-                            state = rememberDraggableState { dragTotal.floatValue += it },
-                            orientation = Orientation.Vertical,
-                            onDragStarted = { dragTotal.floatValue = 0f },
-                            onDragStopped = { velocity ->
-                                if (dragTotal.floatValue < -expandDistance || velocity < -expandVelocity) onExpand()
-                            },
-                        )
+                            .draggable(
+                                state = rememberDraggableState { dragTotal.floatValue += it },
+                                orientation = Orientation.Vertical,
+                                onDragStarted = { dragTotal.floatValue = 0f },
+                                onDragStopped = { velocity ->
+                                    if (dragTotal.floatValue < -expandDistance || velocity < -expandVelocity) onExpand()
+                                },
+                            )
                             .semantics { contentDescription = "Now playing: ${track.title}. Open player." }
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                            .padding(start = 10.dp, end = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // 10dp inset inside a 22dp dock: 12dp corners keep the curves concentric.
                         ArtworkImage(
                             albumId = track.albumId,
                             songUri = track.songUri,
                             size = 44.dp,
-                            cornerRadius = 8.dp,
+                            cornerRadius = 12.dp,
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 text = track.title,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -143,31 +153,46 @@ fun MiniPlayer(
                         IconButton(onClick = onPrevious) {
                             Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous song")
                         }
+                        // The play button is the one solid disc on the dock: ink on light, white on dark.
                         IconButton(onClick = onPlayPause) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.onSurface),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    tint = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
                         }
                         IconButton(onClick = onNext) {
                             Icon(Icons.Rounded.SkipNext, contentDescription = "Next song")
                         }
                     }
 
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                        LinearProgressIndicator(
-                            progress = progress,
-                            modifier = Modifier.fillMaxWidth().height(2.dp),
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = progress,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(2.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = Color.Transparent,
+                        gapSize = 0.dp,
+                        drawStopIndicator = {},
+                    )
                 }
             }
         }
     }
 }
 
+private val DOCK_RADIUS = 22.dp
 private val SWIPE_UP_DISTANCE = 32.dp
 private val SWIPE_UP_VELOCITY = 600.dp
 
