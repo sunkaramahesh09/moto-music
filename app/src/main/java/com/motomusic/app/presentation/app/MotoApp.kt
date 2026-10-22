@@ -3,6 +3,24 @@ package com.motomusic.app.presentation.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import kotlinx.coroutines.flow.filterNotNull
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -135,6 +153,22 @@ private fun MotoAppContent(
 
     val topLevel = TopLevelDestination.entries.firstOrNull { it.route == currentRoute }
     val tabs = remember { TopLevelDestination.entries.map { GlassTab(it.label, it.icon) } }
+    val showTabs = topLevel != null
+    val tabsTransition = updateTransition(showTabs, label = "tabs")
+    var lastTopLevel by remember { mutableStateOf(TopLevelDestination.entries.first()) }
+    LaunchedEffect(topLevel) { if (topLevel != null) lastTopLevel = topLevel }
+
+    // The dock's live height is written every frame while it animates, but only read here, so
+    // it never recomposes anything. The settled value is what the screens are laid out against.
+    var dockHeightPx by remember { mutableIntStateOf(0) }
+    var settledDockPx by remember { mutableIntStateOf(0) }
+    LaunchedEffect(tabsTransition) {
+        snapshotFlow { if (tabsTransition.currentState == tabsTransition.targetState) dockHeightPx else null }
+            .filterNotNull()
+            .collect { settledDockPx = it }
+    }
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
 
     CompositionLocalProvider(
         LocalSongActions provides playerViewModel,
@@ -145,8 +179,7 @@ private fun MotoAppContent(
             Scaffold(
                 snackbarHost = { if (!playerExpanded) SnackbarHost(snackbarHostState) },
                 bottomBar = {
-                    // Detail screens have no tab bar, so the dock keeps clear of the system bar itself.
-                    Column(if (topLevel == null) Modifier.navigationBarsPadding() else Modifier) {
+                    Column(Modifier.onSizeChanged { dockHeightPx = it.height }) {
                         MiniPlayer(
                             track = playback.current,
                             isPlaying = playback.isPlaying,
@@ -158,25 +191,52 @@ private fun MotoAppContent(
                             onDismiss = playerViewModel::clearQueue,
                         )
                         // Detail screens give the bar's room back to their content, smoothly.
-                        AnimatedVisibility(
-                            visible = topLevel != null,
+                        tabsTransition.AnimatedVisibility(
+                            visible = { it },
                             enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
                             exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
                         ) {
                             GlassNavigationBar(
                                 tabs = tabs,
-                                selectedIndex = TopLevelDestination.entries.indexOf(topLevel),
+                                // While the bar shrinks away, keep the tab it belonged to lit.
+                                selectedIndex = TopLevelDestination.entries.indexOf(topLevel ?: lastTopLevel),
                                 onSelect = { index ->
                                     navController.navigateToTopLevel(TopLevelDestination.entries[index].route)
                                 },
+                                windowInsets = WindowInsets(0),
                             )
                         }
+                        // The strip behind the system navigation bar. It stays in place whether
+                        // or not the tabs are showing, so the dock never jumps by the inset.
+                        val stripColor by animateColorAsState(
+                            targetValue = if (showTabs) MaterialTheme.colorScheme.surface else Color.Transparent,
+                            label = "navStrip",
+                        )
+                        Spacer(
+                            Modifier
+                                .fillMaxWidth()
+                                .drawBehind { drawRect(stripColor) }
+                                .windowInsetsBottomHeight(WindowInsets.navigationBars),
+                        )
                     }
                 },
             ) { innerPadding ->
+                // Screens get the dock's height only once it has settled. Passing the animating
+                // height would re-layout both screens of a navigation transition every frame.
+                val bottom = if (settledDockPx > 0) {
+                    with(density) { settledDockPx.toDp() }
+                } else {
+                    innerPadding.calculateBottomPadding()
+                }
+                val contentPadding = PaddingValues(
+                    start = innerPadding.calculateStartPadding(layoutDirection),
+                    top = innerPadding.calculateTopPadding(),
+                    end = innerPadding.calculateEndPadding(layoutDirection),
+                    bottom = bottom,
+                )
                 MotoNavHost(
                     navController = navController,
-                    contentPadding = innerPadding,
+                    contentPadding = contentPadding,
                     playerViewModel = playerViewModel,
                     onRescan = mainViewModel::refreshLibrary,
                     onOpenEqualizer = audioViewModel::openEqualizer,

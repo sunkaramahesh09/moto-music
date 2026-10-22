@@ -1,0 +1,5 @@
+# Compile all of Moto Music's own code ahead of time, so the first visit to each screen and
+# the first run of each animation are not interpreted. AndroidX libraries ship their own
+# profiles; profileinstaller applies both for APKs installed outside the Play Store.
+HSPLcom/motomusic/app/**->**(**)**
+Lcom/motomusic/app/**;

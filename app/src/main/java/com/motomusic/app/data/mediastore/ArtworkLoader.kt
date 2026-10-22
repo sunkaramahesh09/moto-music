@@ -55,7 +55,9 @@ class ArtworkLoader @Inject constructor(
 
         val deferred = lock.withLock {
             inFlight[key] ?: scope.async {
-                val bitmap = decode(albumId, songUri, size)
+                // Uploading to the GPU here, off the main thread, keeps the first frame that
+                // draws a cover from stalling mid-scroll or mid-transition.
+                val bitmap = decode(albumId, songUri, size)?.also { it.prepareToDraw() }
                 if (bitmap != null) cache.put(key, bitmap) else missing.put(key, true)
                 lock.withLock { inFlight.remove(key) }
                 bitmap

@@ -29,8 +29,8 @@ android {
         applicationId = "com.motomusic.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.3.0"
+        versionCode = 5
+        versionName = "0.3.1"
 
         testInstrumentationRunner = "com.motomusic.app.HiltTestRunner"
         vectorDrawables.useSupportLibrary = true
@@ -91,6 +91,7 @@ ksp {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

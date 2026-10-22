@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -42,6 +44,7 @@ fun GlassNavigationBar(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    windowInsets: WindowInsets = WindowInsets.navigationBars,
 ) {
     Column(
         modifier = modifier
@@ -57,7 +60,7 @@ fun GlassNavigationBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
+                .windowInsetsPadding(windowInsets)
                 .heightIn(min = 56.dp)
                 .selectableGroup(),
             horizontalArrangement = Arrangement.SpaceEvenly,
